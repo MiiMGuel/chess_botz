@@ -10,6 +10,11 @@ project(
 add_subdirectory(lib/raylib)
 
 add_executable(game)
-target_sources(game PRIVATE ${PROJECT_SOURCE_DIR}/src/main.c)
+target_sources(
+    game 
+    PRIVATE 
+    ${PROJECT_SOURCE_DIR}/src/entry.c
+    ${PROJECT_SOURCE_DIR}/src/game.c
+) 
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(game PRIVATE raylib)
