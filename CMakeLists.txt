@@ -12,7 +12,7 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(lib/SDL)
 set(BUILD_SHARED_LIBS ON)
 
-add_executable(game)
+add_executable(game WIN32)
 target_sources(
     game 
     PRIVATE 
