@@ -7,15 +7,15 @@ project(
     LANGUAGES C CXX
 )
 
-set(SDL_SHARED FALSE)
 set(SDL_STATIC TRUE)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(lib/SDL)
+set(BUILD_SHARED_LIBS ON)
 
 add_executable(game)
 target_sources(
     game 
     PRIVATE 
-    ${PROJECT_SOURCE_DIR}/src/entry.cpp
     ${PROJECT_SOURCE_DIR}/src/game.cpp
 ) 
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)
