@@ -22,3 +22,9 @@ target_sources(
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/lib/stb)
 target_link_libraries(game PRIVATE SDL2::SDL2-static)
+set_target_properties(
+    game
+    PROPERTIES
+    C_STANDARD 17
+    CXX_STANDARD 20
+)
