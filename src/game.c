@@ -19,23 +19,21 @@ void start(void* app_data) {
     data->window = SDL_CreateWindow(
         "game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN
-    ); if (data->window == NULL) {
-        logg_print(LOGG_ERROR, SDL_GetError());
-        exit(1);
-    }
+    ); if (data->window == NULL)
+        logg_exit(1, LOGG_ERROR, SDL_GetError());
 
     data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_ACCELERATED); 
-    if (data->renderer == NULL) {
-        logg_print(LOGG_ERROR, SDL_GetError());
-        exit(1);
-    } SDL_ShowWindow(data->window);
+    if (data->renderer == NULL) 
+        logg_exit(1, LOGG_ERROR, SDL_GetError());
+        
+    SDL_ShowWindow(data->window);
 }
 
 void close(void* app_data) {
     game_data_t* data = (game_data_t*)app_data;
     if (data->renderer) SDL_DestroyRenderer(data->renderer);
     if (data->window) SDL_DestroyWindow(data->window);
-    free(data); logg_print(LOGG_INFO, "App Closed!");
+    free(data);
 }
 
 void run(void* app_data) {

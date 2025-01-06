@@ -78,3 +78,31 @@ void logg_fprintf(FILE* file, logg_level_t level, const char* msg, ...) {
         va_end(args);
     }
 }
+
+void logg_exit(int ec, logg_level_t level, const char* msg) {
+    logg_print(level, msg);
+    exit(ec);
+}
+
+void logg_exitf(int ec, logg_level_t level, const char* msg, ...) {
+    if (level >= _logg_level) {
+        va_list args;
+        va_start(args, msg);
+        _logg_pformat(level, msg, args);
+        va_end(args);
+    } exit(ec);
+}
+
+void logg_fexit(FILE* file, int ec, logg_level_t level, const char* msg) {
+    logg_printf(level, msg);
+    exit(ec);
+}
+
+void logg_fexitf(FILE* file, int ec, logg_level_t level, const char* msg, ...) {
+    if (level >= _logg_level) {
+        va_list args;
+        va_start(args, msg);
+        _logg_fpformat(file, level, msg, args);
+        va_end(args);
+    } exit(ec);
+}
