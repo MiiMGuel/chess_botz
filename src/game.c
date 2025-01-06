@@ -33,7 +33,7 @@ void close(void* app_data) {
     game_data_t* data = (game_data_t*)app_data;
     if (data->renderer) SDL_DestroyRenderer(data->renderer);
     if (data->window) SDL_DestroyWindow(data->window);
-    free(data);
+    free(data); logg_exit(0, LOGG_INFO, "App closed!");
 }
 
 void run(void* app_data) {
