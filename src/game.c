@@ -1,6 +1,6 @@
 #include <memory.h>
 
-#include "entry.h"
+#include "main.h"
 #include "logg.h"
 #include "types.h"
 #include "SDL2/SDL.h"
@@ -25,7 +25,7 @@ void start(void* app_data) {
     data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_ACCELERATED); 
     if (data->renderer == NULL) 
         logg_exit(1, LOGG_ERROR, SDL_GetError());
-        
+
     SDL_ShowWindow(data->window);
 }
 
@@ -49,7 +49,7 @@ void run(void* app_data) {
     }
 }
 
-app_info_t entry_app(int argc, char* argv[]) {
+app_info_t main_app(int argc, char* argv[]) {
     game_data_t* data = malloc(sizeof(game_data_t));
     memset(data, 0, sizeof(game_data_t));
     data->argc = argc;

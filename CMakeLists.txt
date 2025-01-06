@@ -15,8 +15,8 @@ add_executable(game)
 target_sources(
     game 
     PRIVATE 
+    ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/game.c
-    ${PROJECT_SOURCE_DIR}/src/entry.c
     ${PROJECT_SOURCE_DIR}/src/logg.c
 ) 
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)

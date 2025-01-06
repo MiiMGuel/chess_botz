@@ -1,5 +1,5 @@
-#ifndef ENTRY_H
-#define ENTRY_H
+#ifndef MAIN_H
+#define MAIN_H
 
 typedef struct app_info {
     void* app_data;
@@ -8,6 +8,6 @@ typedef struct app_info {
     void (*close)(void* app_data);
 } app_info_t;
 
-app_info_t entry_app(int argc, char* argv[]); 
+app_info_t main_app(int argc, char* argv[]); 
 
-#endif // ENTRY_H
+#endif // MAIN_H
