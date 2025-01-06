@@ -1,31 +1,54 @@
-#include <assert.h>
 #include <memory.h>
 
-#define ENTRY_IMPL
 #include "entry.h"
 #include "logg.h"
 #include "types.h"
 #include "SDL2/SDL.h"
 
 typedef struct game_data {
-    int argc;
-    char** argv;
-    bool running;
+    int           argc;
+    char**        argv;
+    bool          running;
+    SDL_Window*   window;
+    SDL_Renderer* renderer;
+    SDL_Event     event;
 } game_data_t;
 
 void start(void* app_data) {
     game_data_t* data = (game_data_t*)app_data;
-    logg_print(LOGG_INFO, "App Started!");
+    data->window = SDL_CreateWindow(
+        "game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN
+    ); if (data->window == NULL) {
+        logg_print(LOGG_ERROR, SDL_GetError());
+        exit(1);
+    }
+
+    data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_ACCELERATED); 
+    if (data->renderer == NULL) {
+        logg_print(LOGG_ERROR, SDL_GetError());
+        exit(1);
+    } SDL_ShowWindow(data->window);
 }
 
 void close(void* app_data) {
     game_data_t* data = (game_data_t*)app_data;
+    if (data->renderer) SDL_DestroyRenderer(data->renderer);
+    if (data->window) SDL_DestroyWindow(data->window);
     free(data); logg_print(LOGG_INFO, "App Closed!");
 }
 
 void run(void* app_data) {
     game_data_t* data = (game_data_t*)app_data;
-    logg_printf(LOGG_TRACE, "The Number of PI is %0.2f", 3.14);
+    while (data->running) {
+        while(SDL_PollEvent(&data->event)) {
+            if (data->event.type == SDL_QUIT) exit(0);
+        }
+
+        SDL_SetRenderDrawColor(data->renderer, 255, 255, 255, 255);
+        SDL_RenderClear(data->renderer);
+        SDL_RenderPresent(data->renderer);
+    }
 }
 
 app_info_t entry_app(int argc, char* argv[]) {
