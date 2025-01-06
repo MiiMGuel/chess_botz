@@ -11,13 +11,13 @@ set(SDL_STATIC TRUE)
 set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(lib/SDL)
 
-add_executable(game WIN32)
+add_executable(game)
 target_sources(
     game 
     PRIVATE 
-    ${PROJECT_SOURCE_DIR}/src/game.cpp
-    ${PROJECT_SOURCE_DIR}/src/engine/entry.cpp
-    ${PROJECT_SOURCE_DIR}/src/engine/engine.cpp
+    ${PROJECT_SOURCE_DIR}/src/game.c
+    ${PROJECT_SOURCE_DIR}/src/entry.c
+    ${PROJECT_SOURCE_DIR}/src/logg.c
 ) 
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/lib/stb)
