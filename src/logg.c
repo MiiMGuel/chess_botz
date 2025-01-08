@@ -58,7 +58,7 @@ void logg_set_level(logg_level_t level) {
 }
 
 void logg_print(logg_level_t level, const char* msg) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         time_t now; time(&now);
         char* date = ctime(&now);
         date[strlen(date) - 1] = '\0';
@@ -68,7 +68,7 @@ void logg_print(logg_level_t level, const char* msg) {
 }
 
 void logg_printf(logg_level_t level, const char* msg, ...) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         va_list args; va_start(args, msg);
         _logg_pformat(level, msg, args);
         va_end(args);
@@ -76,7 +76,7 @@ void logg_printf(logg_level_t level, const char* msg, ...) {
 }
 
 void logg_fprint(FILE* file, logg_level_t level, const char* msg) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         time_t now; time(&now);
         char* date = ctime(&now);
         date[strlen(date) - 1] = '\0';
@@ -86,7 +86,7 @@ void logg_fprint(FILE* file, logg_level_t level, const char* msg) {
 }
 
 void logg_fprintf(FILE* file, logg_level_t level, const char* msg, ...) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         va_list args; va_start(args, msg);
         _logg_fpformat(file, level, msg, args);
         va_end(args);
@@ -94,7 +94,7 @@ void logg_fprintf(FILE* file, logg_level_t level, const char* msg, ...) {
 }
 
 void logg_exit(int ec, logg_level_t level, const char* msg) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         time_t now; time(&now);
         char* date = ctime(&now);
         date[strlen(date) - 1] = '\0';
@@ -104,7 +104,7 @@ void logg_exit(int ec, logg_level_t level, const char* msg) {
 }
 
 void logg_exitf(int ec, logg_level_t level, const char* msg, ...) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         va_list args; va_start(args, msg);
         _logg_exformat(ec, level, msg, args);
         va_end(args);
@@ -112,7 +112,7 @@ void logg_exitf(int ec, logg_level_t level, const char* msg, ...) {
 }
 
 void logg_fexit(FILE* file, int ec, logg_level_t level, const char* msg) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         time_t now; time(&now);
         char* date = ctime(&now);
         date[strlen(date) - 1] = '\0';
@@ -122,7 +122,7 @@ void logg_fexit(FILE* file, int ec, logg_level_t level, const char* msg) {
 }
 
 void logg_fexitf(FILE* file, int ec, logg_level_t level, const char* msg, ...) {
-    if (level >= _logg_level) {
+    if (level >= _logg_level && level >= LOGG_ERROR) {
         va_list args; va_start(args, msg);
         _logg_fexformat(file, ec, level, msg, args);
         va_end(args);
