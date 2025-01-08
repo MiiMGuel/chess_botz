@@ -5,16 +5,16 @@
 #include "types.h"
 #include "SDL2/SDL.h"
 
-typedef struct game_data {
+typedef struct app_data {
     int           argc;
     char**        argv;
     SDL_Window*   window;
     SDL_Renderer* renderer;
     SDL_Event     event;
-} game_data_t;
+} app_data_t;
 
 void start(void* app_data) {
-    game_data_t* data = (game_data_t*)app_data;
+    app_data_t* data = (app_data_t*)app_data;
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0)
         logg_exit(1, LOGG_ERROR, SDL_GetError());
 
@@ -32,14 +32,14 @@ void start(void* app_data) {
 }
 
 void close(void* app_data) {
-    game_data_t* data = (game_data_t*)app_data;
+    app_data_t* data = (app_data_t*)app_data;
     if (data->renderer) SDL_DestroyRenderer(data->renderer);
     if (data->window) SDL_DestroyWindow(data->window);
     SDL_Quit(); free(data);
 }
 
 void run(void* app_data) {
-    game_data_t* data = (game_data_t*)app_data;
+    app_data_t* data = (app_data_t*)app_data;
     while (true) {
         while(SDL_PollEvent(&data->event)) {
             if (data->event.type == SDL_QUIT) exit(0);
@@ -52,8 +52,8 @@ void run(void* app_data) {
 }
 
 app_info_t main_app(int argc, char* argv[]) {
-    game_data_t* data = malloc(sizeof(game_data_t));
-    memset(data, 0, sizeof(game_data_t));
+    app_data_t* data = malloc(sizeof(app_data_t));
+    memset(data, 0, sizeof(app_data_t));
     data->argc = argc;
     data->argv = argv;
 
