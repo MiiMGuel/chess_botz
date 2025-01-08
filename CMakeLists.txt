@@ -22,7 +22,7 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
 ) 
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/lib/glad)
+target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/lib/glad/include)
 target_include_directories(game PRIVATE ${PROJECT_SOURCE_DIR}/lib/stb)
 target_link_libraries(game PRIVATE SDL2::SDL2-static)
 set_target_properties(
