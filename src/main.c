@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #include "main.h"
 #include "logg.h"
 
@@ -7,11 +9,16 @@ static void _main_close(void) {
     _main_app.close(_main_app.app_data);
 }
 
-int main(int argc, char* argv[]) {
-    _main_app = main_app(argc, argv);
+int WINAPI WinMain(
+    HINSTANCE hInstance, 
+    HINSTANCE hPrevInstance, 
+    LPSTR lpCmdLine, 
+    int nCmdShow
+) {
+    _main_app = main_app(__argc, __argv);
     int close = (_main_app.close != NULL) ? atexit(_main_close) : 0;
-    if (close != 0) 
-        logg_print(LOGG_WARN, "atexit(_main_close) failed! the program can't close properly");
+    if (close != 0)
+        MessageBox(NULL, "\"atexit(_main_close)\" failed! the program can't close properly.", "Error", MB_OK);
     if (_main_app.start != NULL) 
         _main_app.start(_main_app.app_data);
     if (_main_app.run != NULL) 
