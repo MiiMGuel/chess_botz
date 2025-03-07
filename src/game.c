@@ -2,28 +2,74 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <memory.h>
 
 #include "main.h"
 #include "logg.h"
 #include "types.h"
-#include "SDL2/SDL.h"
+#include "SDL3/SDL.h"
+#include "SDL3_ttf/SDL_ttf.h"
+
+static void _SDL_RenderText(
+    SDL_Renderer* renderer, 
+    TTF_Font* font, 
+    SDL_Color color, 
+    const SDL_FRect* rect,
+    const char* message
+) {
+    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(
+        font, 
+        message, 
+        0,
+        color
+    ); 
+    
+    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); 
+    SDL_SetTextureScaleMode(Message, SDL_SCALEMODE_NEAREST);
+
+    SDL_RenderTexture(renderer, Message, NULL, rect);
+    SDL_DestroySurface(surfaceMessage);
+    SDL_DestroyTexture(Message);
+}
+
+static void _SDL_RenderTextf(
+    SDL_Renderer* renderer, 
+    TTF_Font* font, 
+    SDL_Color color, 
+    const SDL_FRect* rect,
+    const char* format,
+    ...
+) {
+    va_list args; va_start(args, format);
+    char buffer[256];
+    vsnprintf(buffer, 256, format, args);
+    va_end(args);
+    _SDL_RenderText(renderer, font, color, rect, buffer);
+}
 
 static void _game_start(void* app_data) {
     game_data_t* game = (game_data_t*)app_data;
     game->flog = fopen("log.txt", "w+");
 
-    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0)
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS))
+        logg_fexit(game->flog, 1, LOGG_ERROR, SDL_GetError());
+    
+    if (!TTF_Init())
         logg_fexit(game->flog, 1, LOGG_ERROR, SDL_GetError());
 
     game->window = SDL_CreateWindow(
-        "game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1280, 200, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN
+        "game", 800, 600, 
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN
     ); if (game->window == NULL)
         logg_fexit(game->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED);
+    game->renderer = SDL_CreateRenderer(game->window, NULL);
     if (game->renderer == NULL)
+        logg_fexit(game->flog, 1, LOGG_ERROR, SDL_GetError());
+
+    game->font = TTF_OpenFont("Minecraft.ttf", 24);
+    if (!game->font)
         logg_fexit(game->flog, 1, LOGG_ERROR, SDL_GetError());
 
     SDL_ShowWindow(game->window);
@@ -33,19 +79,19 @@ static void _game_close(void* app_data) {
     game_data_t* game = (game_data_t*)app_data;
     if (game->renderer) SDL_DestroyRenderer(game->renderer);
     if (game->window) SDL_DestroyWindow(game->window);
-    SDL_Quit(); free(game);
+    if (game->font) TTF_CloseFont(game->font);
+    TTF_Quit(); SDL_Quit(); free(game);
 }
 
 static void _game_run(void* app_data) {
     game_data_t* game = (game_data_t*)app_data;
-
     f64 freq        = (f64)SDL_GetPerformanceFrequency();
     f64 init        = (f64)SDL_GetPerformanceCounter() / freq;
     f64 curr_time   = 0.0;
     f64 prev_time   = 0.0;
     f64 delta_time  = 0.0;
     f64 cdelta_time = 0.0;
-    u64 curr_tick   = SDL_GetTicks64();
+    u64 curr_tick   = SDL_GetTicks();
     u64 prev_tick   = curr_tick;
     u64 delta_tick  = 0.0;
     u64 cdelta_tick = 0.0;
@@ -57,71 +103,23 @@ static void _game_run(void* app_data) {
         delta_time   = curr_time - prev_time;
         cdelta_time += delta_time;
 
-        curr_tick    = SDL_GetTicks64();
+        curr_tick    = SDL_GetTicks();
         delta_tick   = curr_tick - prev_tick;
         cdelta_tick += delta_tick;
 
         while(SDL_PollEvent(&game->event))
-            if (game->event.type == SDL_QUIT) exit(0);
+            if (game->event.type == SDL_EVENT_QUIT) exit(0);
 
         SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
         SDL_RenderClear(game->renderer);
 
-        SDL_SetRenderDrawColor(game->renderer, 255, 0, 255, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 0.0, 
-            .w = (1.0 / delta_time) / 3.0, 
-            .h = 50.0
-        }); SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 0.0, 
-            .w = 1000.0 / 3.0, 
-            .h = 10.0
-        });
-
-        SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0,
-            .y = 50.0, 
-            .w = fps / 3.0, 
-            .h = 50.0 
-        }); SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 50.0, 
-            .w = 1000.0 / 3.0, 
-            .h = 10.0
-        });
-        
-        SDL_SetRenderDrawColor(game->renderer, 0, 255, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 100.0, 
-            .w = fcount / 3.0, 
-            .h = 50.0 
-        }); SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 100.0, 
-            .w = 1000.0 / 3.0, 
-            .h = 10.0
-        });
-
-        SDL_SetRenderDrawColor(game->renderer, 0, 0, 255, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 150.0, 
-            .w = cdelta_time * 325.0, 
-            .h = 50.0 
-        }); SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 255);
-        SDL_RenderFillRectF(game->renderer, &(SDL_FRect){ 
-            .x = 0.0, 
-            .y = 150.0,
-            .w = 325.0, 
-            .h = 10.0
-        });
+        _SDL_RenderTextf(
+            game->renderer,
+            game->font,
+            (SDL_Color){.r = 0, .g = 0, .b = 0, .a = 255},
+            &(SDL_FRect){.w = 120, .h = 60, .x = 0, .y = 0},
+            "%d", fps
+        );
 
         SDL_RenderPresent(game->renderer);
 
