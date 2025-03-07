@@ -34,7 +34,7 @@ static void _chess_start(void* app_data) {
     if (!app->renderer)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    app->font = TTF_OpenFont("Minecraft.ttf", 24);
+    app->font = TTF_OpenFont("JetBrainsMonoNerdFont-SemiBold.ttf", 128);
     if (!app->font)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
@@ -98,6 +98,14 @@ static void _chess_run(void* app_data) {
             (SDL_Color){240, 217, 181, 255},
             (SDL_Color){181, 136, 99, 255},
             640
+        );
+
+        SDL_RenderText(
+            app->renderer,
+            app->font,
+            (SDL_Color){255, 255, 255, 255},
+            &(SDL_FRect){.w = 480, .h = 80, .x = 720, .y = 40}, 
+            "Hello, World!"
         );
 
         SDL_RenderTexture(app->renderer, app->pieces_img, NULL, &(SDL_FRect){

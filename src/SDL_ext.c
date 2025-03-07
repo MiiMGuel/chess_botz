@@ -12,11 +12,11 @@ void SDL_RenderText(
     TTF_Font* font, 
     SDL_Color color, 
     const SDL_FRect* rect,
-    const char* message
+    const char* msg
 ) {
     SDL_Surface* surfaceMessage = TTF_RenderText_Solid(
         font, 
-        message, 
+        msg, 
         0,
         color
     ); 
@@ -34,12 +34,12 @@ void SDL_RenderTextf(
     TTF_Font* font, 
     SDL_Color color, 
     const SDL_FRect* rect,
-    const char* format,
+    const char* fmt,
     ...
 ) {
-    va_list args; va_start(args, format);
+    va_list args; va_start(args, fmt);
     char buffer[256];
-    vsnprintf(buffer, 256, format, args);
+    vsnprintf(buffer, 256, fmt, args);
     va_end(args);
     SDL_RenderText(renderer, font, color, rect, buffer);
 }

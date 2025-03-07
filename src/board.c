@@ -10,6 +10,10 @@
 #include "SDL3/SDL.h"
 #include "SDL3_ttf/SDL_ttf.h"
 
+void board_setup(board_t* board, const char* fen) {
+    // TODO: board setup func impl
+}
+
 void board_draw(
     SDL_Renderer* renderer, 
     SDL_Texture* pieces_img,
