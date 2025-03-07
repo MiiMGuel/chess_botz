@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <memory.h>
 
 #include "main.h"
 #include "logg.h"
@@ -11,43 +10,7 @@
 #include "board.h"
 #include "SDL3/SDL.h"
 #include "SDL3_ttf/SDL_ttf.h"
-
-static void _SDL_RenderText(
-    SDL_Renderer* renderer, 
-    TTF_Font* font, 
-    SDL_Color color, 
-    const SDL_FRect* rect,
-    const char* message
-) {
-    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(
-        font, 
-        message, 
-        0,
-        color
-    ); 
-    
-    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); 
-    SDL_SetTextureScaleMode(Message, SDL_SCALEMODE_NEAREST);
-
-    SDL_RenderTexture(renderer, Message, NULL, rect);
-    SDL_DestroySurface(surfaceMessage);
-    SDL_DestroyTexture(Message);
-}
-
-static void _SDL_RenderTextf(
-    SDL_Renderer* renderer, 
-    TTF_Font* font, 
-    SDL_Color color, 
-    const SDL_FRect* rect,
-    const char* format,
-    ...
-) {
-    va_list args; va_start(args, format);
-    char buffer[256];
-    vsnprintf(buffer, 256, format, args);
-    va_end(args);
-    _SDL_RenderText(renderer, font, color, rect, buffer);
-}
+#include "SDL_ext.h"
 
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;

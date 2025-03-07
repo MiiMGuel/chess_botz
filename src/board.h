@@ -30,6 +30,13 @@ typedef struct board {
     char fen[128];
 } board_t;
 
-void board_draw(SDL_Renderer* renderer, SDL_Texture* pieces_img, const board_t* board, SDL_Color black, SDL_Color white, u32 whole_size);
+void board_draw(
+    SDL_Renderer* renderer, 
+    SDL_Texture* pieces_img, 
+    const board_t* board, 
+    SDL_Color black, 
+    SDL_Color white, 
+    u32 whole_size
+);
 
 #endif // BOARD_H
