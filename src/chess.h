@@ -8,6 +8,11 @@
 #include "SDL3/SDL.h" 
 #include "SDL3_ttf/SDL_ttf.h"
 
+#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#endif
+#include "cimgui/cimgui.h"
+
 typedef struct app_data {
     int           argc;
     char**        argv;
@@ -16,9 +21,11 @@ typedef struct app_data {
     FILE*         flog;
     SDL_Window*   window;
     SDL_Renderer* renderer;
+    SDL_Texture*  board_img;
     SDL_Texture*  pieces_img;
     SDL_Event     event;
     TTF_Font*     font;
+    ImGuiContext* imgui_ctx;
 } app_data_t;
 
 #endif // CHESS_H

@@ -12,10 +12,10 @@
 #include "SDL3_ttf/SDL_ttf.h"
 #include "SDL_ext.h"
 
+#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#endif
 #include "cimgui/cimgui.h"
-// #include "backends/imgui_impl_sdl3.h"
-// #include "backends/imgui_impl_sdlrenderer3.h"
 
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
@@ -39,24 +39,34 @@ static void _chess_start(void* app_data) {
     if (!app->renderer)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    app->font = TTF_OpenFont("JetBrainsMonoNerdFont-SemiBold.ttf", 256);
+    app->font = TTF_OpenFont("assets/JetBrainsMonoNerdFont-SemiBold.ttf", 256);
     if (!app->font)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    {
-        SDL_Surface* surface = SDL_LoadBMP("pieces.bmp");
+    { // Load textures from surface
+        SDL_Surface* surface = SDL_LoadBMP("assets/board/brown.bmp");
+        if (!surface)
+            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+
+        app->board_img = SDL_CreateTextureFromSurface(app->renderer, surface);
+        if (!app->board_img)
+            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+        SDL_DestroySurface(surface);
+
+        surface = SDL_LoadBMP("assets/pieces/cburnett.bmp");
         if (!surface)
             logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
         app->pieces_img = SDL_CreateTextureFromSurface(app->renderer, surface);
         if (!app->pieces_img)
             logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+        SDL_DestroySurface(surface);
     }
 
-    igCreateContext(NULL);
+    app->imgui_ctx = igCreateContext(NULL);
+    igSetCurrentContext(app->imgui_ctx);
     ImGuiIO io = *igGetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui_ImplSDL3_InitForSDLRenderer(app->window, app->renderer);
     ImGui_ImplSDLRenderer3_Init(app->renderer);
@@ -68,13 +78,16 @@ static void _chess_start(void* app_data) {
 
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
-    ImGui_ImplSDLRenderer3_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    igDestroyContext(NULL);
+    if (app->imgui_ctx) {
+        ImGui_ImplSDLRenderer3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        igDestroyContext(NULL);
+    } if (app->board_img) SDL_DestroyTexture(app->board_img);
+    if (app->pieces_img) SDL_DestroyTexture(app->pieces_img);
     if (app->renderer) SDL_DestroyRenderer(app->renderer);
     if (app->window) SDL_DestroyWindow(app->window);
     if (app->font) TTF_CloseFont(app->font);
-    TTF_Quit(); SDL_Quit(); free(app);
+    TTF_Quit(); SDL_Quit(); fclose(app->flog); free(app);
 }
 
 static void _chess_run(void* app_data) {
@@ -131,12 +144,10 @@ static void _chess_run(void* app_data) {
 
         board_draw(
             app->renderer,
+            app->board_img,
             app->pieces_img,
-            app->font,
             &board,
-            (SDL_Color){240, 217, 181, 255},
-            (SDL_Color){181, 136, 99, 255},
-            640, true
+            640
         );
 
         ImGui_ImplSDLRenderer3_RenderDrawData(igGetDrawData(), app->renderer);

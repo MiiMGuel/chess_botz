@@ -80,21 +80,18 @@ void board_setup(board_t* board, const char* fen) {
 
 void board_draw(
     SDL_Renderer* renderer, 
+    SDL_Texture* board_img,
     SDL_Texture* pieces_img,
-    TTF_Font* font, 
     const board_t* board,
-    SDL_Color black, 
-    SDL_Color white, 
-    u32 whole_size,
-    bool draw_coord
+    u32 size
 ) {
-    u32 square_size = whole_size / 8;
+    u32 square_size = size / 8;
     u32 coord_size  = square_size / 4;
     u32 index       = 0;
+
+    SDL_RenderTexture(renderer, board_img, NULL, &(SDL_FRect){.w = size, .h = size, .x = 40, .y = 40});
     for (u8 rank = 0; rank < 8; rank++) {
         for (u8 file = 0; file < 8; file++) {
-            if ((rank + file) % 2 != 0) SDL_SetRenderDrawColor(renderer, black.r, black.g, black.b, black.a);
-            else  SDL_SetRenderDrawColor(renderer, white.r, white.g, white.b, white.a);
 
             SDL_FRect dst = {
                 .w = square_size, 
@@ -102,8 +99,6 @@ void board_draw(
                 .x = 40 + square_size * file, 
                 .y = 40 + square_size * rank
             };
-
-            SDL_RenderFillRect(renderer, &dst);
 
             switch (board->square[index]) {
                 case PIECE_BLACK_KING: SDL_RenderTexture(renderer, pieces_img, &(SDL_FRect){.w=200,.h=200,.x=0,.y=200}, &dst); break;
@@ -120,30 +115,6 @@ void board_draw(
                 case PIECE_WHITE_PAWN: SDL_RenderTexture(renderer, pieces_img, &(SDL_FRect){.w=200,.h=200,.x=1000,.y=0}, &dst); break;
                 default: break;
             } index++;
-        }
-    }
-
-    if (draw_coord) {
-        for (u8 rank = 0; rank < 8; rank++) {
-            SDL_Color fg = ((rank % 2) != 0)? white : black;
-            SDL_RenderTextf(renderer, font, fg, &(SDL_FRect) {
-                .w = coord_size - coord_size * 0.4, 
-                .h = coord_size, 
-                .x = 42,
-                .y = 42 + square_size * rank
-            }, "%d", rank + 1
-            );
-        }
-
-        for (u8 file = 0; file < 8; file++) {
-            SDL_Color fg = ((file % 2) != 0)? black : white;
-            SDL_RenderTextf(renderer, font, fg, &(SDL_FRect) {
-                .w = coord_size - coord_size * 0.4, 
-                .h = coord_size, 
-                .x = (120 - coord_size) + square_size * file,
-                .y = whole_size + 40 - coord_size
-            }, "%c", 97 + file
-            );
         }
     }
 }

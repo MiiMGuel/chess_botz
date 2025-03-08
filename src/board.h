@@ -40,13 +40,10 @@ typedef struct board {
 void board_setup(board_t* board, const char* fen);
 void board_draw(
     SDL_Renderer* renderer, 
+    SDL_Texture* board_img,
     SDL_Texture* pieces_img,
-    TTF_Font* font, 
     const board_t* board, 
-    SDL_Color black, 
-    SDL_Color white, 
-    u32 whole_size,
-    bool draw_coord
+    u32 size
 );
 
 #endif // BOARD_H
