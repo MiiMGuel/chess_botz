@@ -12,6 +12,11 @@
 #include "SDL3_ttf/SDL_ttf.h"
 #include "SDL_ext.h"
 
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#include "cimgui/cimgui.h"
+// #include "backends/imgui_impl_sdl3.h"
+// #include "backends/imgui_impl_sdlrenderer3.h"
+
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
     app->flog          = fopen("log.txt", "w+");
@@ -34,7 +39,7 @@ static void _chess_start(void* app_data) {
     if (!app->renderer)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    app->font = TTF_OpenFont("JetBrainsMonoNerdFont-SemiBold.ttf", 128);
+    app->font = TTF_OpenFont("JetBrainsMonoNerdFont-SemiBold.ttf", 256);
     if (!app->font)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
@@ -48,12 +53,24 @@ static void _chess_start(void* app_data) {
             logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
     }
 
+    igCreateContext(NULL);
+    ImGuiIO io = *igGetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    ImGui_ImplSDL3_InitForSDLRenderer(app->window, app->renderer);
+    ImGui_ImplSDLRenderer3_Init(app->renderer);
+    igStyleColorsDark(NULL);
+
     SDL_SetRenderVSync(app->renderer, true);
     SDL_ShowWindow(app->window);
 }
 
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
+    ImGui_ImplSDLRenderer3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    igDestroyContext(NULL);
     if (app->renderer) SDL_DestroyRenderer(app->renderer);
     if (app->window) SDL_DestroyWindow(app->window);
     if (app->font) TTF_CloseFont(app->font);
@@ -75,6 +92,7 @@ static void _chess_run(void* app_data) {
     i64 fcount       = 0;
     i64 fps          = 0;
     board_t board    = {0};
+    board_setup(&board, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
@@ -85,8 +103,28 @@ static void _chess_run(void* app_data) {
         delta_tick   = curr_tick - prev_tick;
         cdelta_tick += delta_tick;
 
-        while(SDL_PollEvent(&app->event))
+        while(SDL_PollEvent(&app->event)) {
+            ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
+        }
+
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        igNewFrame();
+
+        igBegin("window", NULL, 0);
+        igText("Hello from imgui");
+        ImVec2 reset_button;
+        reset_button.x = 0; reset_button.y = 0;
+        if (igButton("reset", reset_button))
+            board_setup(&board, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        ImVec2 Nf3_button;
+        Nf3_button.x = 0; Nf3_button.y = 0;
+        if (igButton("Nf3", Nf3_button))
+            board_setup(&board, "rnbqkbnr/pp1ppppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+        igEnd();
+
+        igRender();
 
         SDL_SetRenderDrawColor(app->renderer, 22, 21, 18, 255);
         SDL_RenderClear(app->renderer);
@@ -94,27 +132,14 @@ static void _chess_run(void* app_data) {
         board_draw(
             app->renderer,
             app->pieces_img,
+            app->font,
             &board,
             (SDL_Color){240, 217, 181, 255},
             (SDL_Color){181, 136, 99, 255},
-            640
+            640, true
         );
 
-        SDL_RenderText(
-            app->renderer,
-            app->font,
-            (SDL_Color){255, 255, 255, 255},
-            &(SDL_FRect){.w = 480, .h = 80, .x = 720, .y = 40}, 
-            "Hello, World!"
-        );
-
-        SDL_RenderTexture(app->renderer, app->pieces_img, NULL, &(SDL_FRect){
-            .w = 480,
-            .h = 160,
-            .x = 40,
-            .y = 40
-        });
-
+        ImGui_ImplSDLRenderer3_RenderDrawData(igGetDrawData(), app->renderer);
         SDL_RenderPresent(app->renderer);
 
         fcount++;

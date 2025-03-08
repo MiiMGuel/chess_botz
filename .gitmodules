@@ -4,3 +4,6 @@
 [submodule "lib/SDL_ttf"]
 	path = lib/SDL_ttf
 	url = https://github.com/libsdl-org/SDL_ttf.git
+[submodule "lib/cimgui"]
+	path = lib/cimgui
+	url = https://github.com/cimgui/cimgui.git
