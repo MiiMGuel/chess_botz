@@ -5,8 +5,8 @@
 #include "SDL3/SDL.h"
 #include "SDL3_ttf/SDL_ttf.h"
 
-#define BLACK_AC 0
-#define WHITE_AC 1
+#define BLACK_TURN 0
+#define WHITE_TURN 1
 
 typedef enum piece_id {
     PIECE_NULL         = 0x00,
@@ -24,17 +24,37 @@ typedef enum piece_id {
     PIECE_WHITE_PAWN   = 0x16
 } piece_id_t;
 
+typedef struct pgn { // Portable Game Notation (PGN)
+    char string[1024];
+    char event[64];
+    char date[64];
+    char time[64];
+    char white_name[64];
+    char black_name[64];
+    i32 white_elo;
+    i32 black_elo;
+} pgn_t;
+
+typedef struct fen { // Forsyth-Edwards Notation (FEN)
+    char string[128];
+    bool active_color;
+    bool black_king_castle;
+    bool black_qween_castle;
+    bool white_king_castle;
+    bool white_qween_castle;
+    char en_passant[2];
+    u32 halfmove_clock;
+    u32 fullmove_number;
+} fen_t;
+
+typedef struct mhn { // Move history Notation (MHN)
+    
+} mhn_t;
+
 typedef struct board {
-    bool ac;
-    bool bkc;
-    bool bqc;
-    bool wkc;
-    bool wqc;
-    bool ep;
-    u32 hm;
-    u32 fm;
     u8 square[64];
-    char fen[128];
+    pgn_t pgn;
+    fen_t fen;
 } board_t;
 
 void board_setup(board_t* board, const char* fen);

@@ -16,8 +16,8 @@ void board_setup(board_t* board, const char* fen) {
     memset(board->square, PIECE_NULL, 64);
 
     // Copy the FEN string to the board structure
-    strncpy(board->fen, fen, sizeof(board->fen) - 1);
-    board->fen[sizeof(board->fen) - 1] = '\0';
+    strncpy(board->fen.string, fen, sizeof(board->fen.string) - 1);
+    board->fen.string[sizeof(board->fen.string) - 1] = '\0';
 
     // Parse the FEN string
     int index = 0;
@@ -54,20 +54,20 @@ void board_setup(board_t* board, const char* fen) {
 
     // Active color
     index++; // Skip the space
-    board->ac = (fen[index] == 'w');
+    board->fen.active_color = (fen[index] == 'w');
 
     // Castling availability
     index += 2; // Skip the space and the active color character
-    board->bkc = false;
-    board->bqc = false;
-    board->wkc = false;
-    board->wqc = false;
+    board->fen.black_king_castle = false;
+    board->fen.black_qween_castle = false;
+    board->fen.white_king_castle = false;
+    board->fen.white_qween_castle = false;
     while (fen[index] != ' ') {
         switch (fen[index]) {
-            case 'k': board->bkc = true; break;
-            case 'q': board->bqc = true; break;
-            case 'K': board->wkc = true; break;
-            case 'Q': board->wqc = true; break;
+            case 'k': board->fen.black_king_castle = true; break;
+            case 'q': board->fen.black_qween_castle = true; break;
+            case 'K': board->fen.white_king_castle = true; break;
+            case 'Q': board->fen.white_qween_castle = true; break;
             default: break;
         }
         index++;
@@ -75,7 +75,31 @@ void board_setup(board_t* board, const char* fen) {
 
     // En passant target square
     index++; // Skip the space
-    board->ep = (fen[index] != '-');
+    if (fen[index] != '-') {
+        board->fen.en_passant[0] = fen[index];
+        board->fen.en_passant[1] = fen[index + 1];
+        index += 2;
+    } else {
+        board->fen.en_passant[0] = '\0';
+        board->fen.en_passant[1] = '\0';
+        index++;
+    }
+
+    // Halfmove clock
+    index++; // Skip the space
+    board->fen.halfmove_clock = 0;
+    while (isdigit(fen[index])) {
+        board->fen.halfmove_clock = board->fen.halfmove_clock * 10 + (fen[index] - '0');
+        index++;
+    }
+
+    // Fullmove number
+    index++; // Skip the space
+    board->fen.fullmove_number = 0;
+    while (isdigit(fen[index])) {
+        board->fen.fullmove_number = board->fen.fullmove_number * 10 + (fen[index] - '0');
+        index++;
+    }
 }
 
 void board_draw(

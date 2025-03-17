@@ -53,7 +53,7 @@ static void _chess_start(void* app_data) {
             logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
         SDL_DestroySurface(surface);
 
-        surface = SDL_LoadBMP("assets/pieces/cburnett.bmp");
+        surface = SDL_LoadBMP("assets/pieces/merida.bmp");
         if (!surface)
             logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
@@ -125,16 +125,10 @@ static void _chess_run(void* app_data) {
         ImGui_ImplSDL3_NewFrame();
         igNewFrame();
 
-        igBegin("window", NULL, 0);
-        igText("Hello from imgui");
-        ImVec2 reset_button;
-        reset_button.x = 0; reset_button.y = 0;
-        if (igButton("reset", reset_button))
-            board_setup(&board, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        ImVec2 Nf3_button;
-        Nf3_button.x = 0; Nf3_button.y = 0;
-        if (igButton("Nf3", Nf3_button))
-            board_setup(&board, "rnbqkbnr/pp1ppppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+        igBegin("Board Notations", NULL, 0);
+        igText("FEN"); igSameLine(0.f, 7.f);
+        if (igInputText("##x", board.fen.string, 128, ImGuiInputTextFlags_EnterReturnsTrue, NULL, NULL)) 
+            board_setup(&board, board.fen.string);
         igEnd();
 
         igRender();
