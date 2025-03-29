@@ -6,8 +6,14 @@
 
 #include "types.h"
 #include "SDL3/SDL.h"
-#include "SDL3_ttf/SDL_ttf.h"
-#include "SDL_ext.h"
+#include "glad/glad.h"
+
+#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_USE_SDL3
+#endif
+#include "cimgui/cimgui.h"
+#include "cimgui/cimgui_impl.h"
 
 typedef struct app_data {
     int           argc;
@@ -16,12 +22,9 @@ typedef struct app_data {
     u32           window_height;
     FILE*         flog;
     SDL_Window*   window;
-    SDL_Renderer* renderer;
-    SDL_Texture*  board_img;
-    SDL_Texture*  pieces_img;
+    SDL_GLContext gl_context;
     SDL_Event     event;
-    TTF_Font*     font;
-    ImGuiContext* imgui_ctx;
+    ImGuiContext* ig_context;
 } app_data_t;
 
 #endif // CHESS_H

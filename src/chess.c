@@ -1,14 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
+#include <Windows.h>
 
-#include "chess.h"
 #include "main.h"
+#include "chess.h"
 #include "logg.h"
 #include "types.h"
 #include "SDL3/SDL.h"
-#include "SDL3_ttf/SDL_ttf.h"
-#include "SDL_ext.h"
+#include "glad/glad.h"
 
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
@@ -18,73 +17,62 @@ static void _chess_start(void* app_data) {
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS))
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
-    
-    if (!TTF_Init()) 
-        logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     app->window = SDL_CreateWindow(
         "app", app->window_width, app->window_height, 
-        SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
     ); if (!app->window)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
-    app->renderer = SDL_CreateRenderer(app->window, NULL);
-    if (!app->renderer)
+    
+    app->gl_context = SDL_GL_CreateContext(app->window);
+    if (!app->gl_context)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+    
+    SDL_GL_MakeCurrent(app->window, app->gl_context);
+    SDL_GL_SetSwapInterval(1); 
 
-    app->font = TTF_OpenFont("assets/JetBrainsMonoNerdFont-SemiBold.ttf", 256);
-    if (!app->font)
-        logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
+    if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress))
+        logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to initialize GLAD\n");
+    
+    glViewport(0, 0, app->window_width, app->window_height);
 
-    { // Load textures from surface
-        SDL_Surface* surface = SDL_LoadBMP("assets/board/brown.bmp");
-        if (!surface)
-            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
-
-        app->board_img = SDL_CreateTextureFromSurface(app->renderer, surface);
-        if (!app->board_img)
-            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
-        SDL_DestroySurface(surface);
-
-        surface = SDL_LoadBMP("assets/pieces/merida.bmp");
-        if (!surface)
-            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
-
-        app->pieces_img = SDL_CreateTextureFromSurface(app->renderer, surface);
-        if (!app->pieces_img)
-            logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
-        SDL_DestroySurface(surface);
-    }
-
-    app->imgui_ctx = igCreateContext(NULL);
-    igSetCurrentContext(app->imgui_ctx);
-    ImGuiIO io = *igGetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    ImGui_ImplSDL3_InitForSDLRenderer(app->window, app->renderer);
-    ImGui_ImplSDLRenderer3_Init(app->renderer);
+    app->ig_context = igCreateContext(NULL);
+    igSetCurrentContext(app->ig_context);
+    ImGuiIO* io     = igGetIO_ContextPtr(app->ig_context);
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    #ifdef IMGUI_HAS_DOCK
+    io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    #endif
+    ImGui_ImplSDL3_InitForOpenGL(app->window, app->gl_context);
+    ImGui_ImplOpenGL3_Init("#version 460");
     igStyleColorsDark(NULL);
 
-    SDL_SetRenderVSync(app->renderer, true);
     SDL_ShowWindow(app->window);
 }
 
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
-    if (app->imgui_ctx) {
-        ImGui_ImplSDLRenderer3_Shutdown();
+    if (app->ig_context) {
+        ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
         igDestroyContext(NULL);
-    } if (app->board_img) SDL_DestroyTexture(app->board_img);
-    if (app->pieces_img) SDL_DestroyTexture(app->pieces_img);
-    if (app->renderer) SDL_DestroyRenderer(app->renderer);
+    } if (app->gl_context) SDL_GL_DestroyContext(app->gl_context);
     if (app->window) SDL_DestroyWindow(app->window);
-    if (app->font) TTF_CloseFont(app->font);
-    TTF_Quit(); SDL_Quit(); fclose(app->flog); free(app);
+    SDL_Quit(); fclose(app->flog); free(app);
 }
 
 static void _chess_run(void* app_data) {
     app_data_t* app  = (app_data_t*)app_data;
+    ImGuiIO* io      = igGetIO_ContextPtr(app->ig_context);
     f64 freq         = (f64)SDL_GetPerformanceFrequency();
     f64 init         = (f64)SDL_GetPerformanceCounter() / freq;
     f64 curr_time    = 0.0;
@@ -110,21 +98,36 @@ static void _chess_run(void* app_data) {
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
+            if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
+                app->window_width  = app->event.window.data1;
+                app->window_height = app->event.window.data2;
+                glViewport(0, 0, app->event.window.data1, app->event.window.data2);
+            }
         }
 
-        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         igNewFrame();
 
         igShowDemoWindow(NULL);
+        igShowStyleEditor(igGetStyle());
 
         igRender();
 
-        SDL_SetRenderDrawColor(app->renderer, 22, 21, 18, 255);
-        SDL_RenderClear(app->renderer);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        ImGui_ImplSDLRenderer3_RenderDrawData(igGetDrawData(), app->renderer);
-        SDL_RenderPresent(app->renderer);
+        ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
+        #ifdef IMGUI_HAS_DOCK
+	    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
+            SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
+            igUpdatePlatformWindows();
+            igRenderPlatformWindowsDefault(NULL,NULL);
+            SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+        }
+        #endif
+        SDL_GL_SwapWindow(app->window);
 
         fcount++;
         if (cdelta_time >= 1.0) {

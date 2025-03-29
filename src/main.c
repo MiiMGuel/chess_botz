@@ -1,5 +1,7 @@
+#include <stdio.h>
+#include <windows.h>
+
 #include "main.h"
-#include "logg.h"
 
 static app_info_t _main_app = { 0 };
 
