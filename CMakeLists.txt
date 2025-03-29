@@ -20,7 +20,6 @@ target_sources(
     PRIVATE 
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/logg.c
-    ${PROJECT_SOURCE_DIR}/src/board.c
     ${PROJECT_SOURCE_DIR}/src/chess.c
     ${PROJECT_SOURCE_DIR}/src/SDL_ext.c
     

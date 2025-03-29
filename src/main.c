@@ -1,5 +1,3 @@
-#include <windows.h>
-
 #include "main.h"
 #include "logg.h"
 
@@ -18,7 +16,7 @@ int WINAPI WinMain(
     _main_app = main_app(__argc, __argv);
     int close = (_main_app.close != NULL) ? atexit(_main_close) : 0;
     if (close != 0)
-        MessageBox(NULL, "\"atexit(_main_close)\" failed! the program can't close properly.", "Error", MB_OK);
+        MessageBox(NULL, L"\"atexit(_main_close)\" failed! the program can't close properly.", L"Error", MB_OK);
     if (_main_app.start != NULL) 
         _main_app.start(_main_app.app_data);
     if (_main_app.run != NULL) 

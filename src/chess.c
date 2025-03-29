@@ -1,21 +1,14 @@
-#include "chess.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include "chess.h"
 #include "main.h"
 #include "logg.h"
 #include "types.h"
-#include "board.h"
 #include "SDL3/SDL.h"
 #include "SDL3_ttf/SDL_ttf.h"
 #include "SDL_ext.h"
-
-#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#endif
-#include "cimgui/cimgui.h"
 
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
@@ -31,7 +24,7 @@ static void _chess_start(void* app_data) {
 
     app->window = SDL_CreateWindow(
         "app", app->window_width, app->window_height, 
-        SDL_WINDOW_HIDDEN
+        SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE
     ); if (!app->window)
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
 
@@ -104,8 +97,6 @@ static void _chess_run(void* app_data) {
     u64 cdelta_tick  = 0.0;
     i64 fcount       = 0;
     i64 fps          = 0;
-    board_t board    = {0};
-    board_setup(&board, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
@@ -125,24 +116,12 @@ static void _chess_run(void* app_data) {
         ImGui_ImplSDL3_NewFrame();
         igNewFrame();
 
-        igBegin("Board Notations", NULL, 0);
-        igText("FEN"); igSameLine(0.f, 7.f);
-        if (igInputText("##x", board.fen.string, 128, ImGuiInputTextFlags_EnterReturnsTrue, NULL, NULL)) 
-            board_setup(&board, board.fen.string);
-        igEnd();
+        igShowDemoWindow(NULL);
 
         igRender();
 
         SDL_SetRenderDrawColor(app->renderer, 22, 21, 18, 255);
         SDL_RenderClear(app->renderer);
-
-        board_draw(
-            app->renderer,
-            app->board_img,
-            app->pieces_img,
-            &board,
-            640
-        );
 
         ImGui_ImplSDLRenderer3_RenderDrawData(igGetDrawData(), app->renderer);
         SDL_RenderPresent(app->renderer);

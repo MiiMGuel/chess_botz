@@ -1,6 +1,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include <windows.h>
+
 typedef struct app_info {
     void* app_data;
     void (*start)(void* app_data);

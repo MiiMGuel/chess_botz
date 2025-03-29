@@ -5,13 +5,9 @@
 #include <stdlib.h>
 
 #include "types.h"
-#include "SDL3/SDL.h" 
+#include "SDL3/SDL.h"
 #include "SDL3_ttf/SDL_ttf.h"
-
-#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#endif
-#include "cimgui/cimgui.h"
+#include "SDL_ext.h"
 
 typedef struct app_data {
     int           argc;
