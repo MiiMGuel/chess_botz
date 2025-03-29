@@ -9,6 +9,11 @@
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#define CIMGUI_USE_SDL3
+#include "cimgui/cimgui.h"
+#include "cimgui/cimgui_impl.h"
+
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
     app->flog          = fopen("log.txt", "w+");
@@ -56,11 +61,37 @@ static void _chess_start(void* app_data) {
     ImGui_ImplOpenGL3_Init("#version 460");
     igStyleColorsDark(NULL);
 
+    ImGuiStyle* style = igGetStyle();
+    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        style->WindowBorderSize            = 0.0f;
+        style->ChildBorderSize             = 0.0f;
+        style->PopupBorderSize             = 0.0f;
+        style->FrameBorderSize             = 0.0f;
+        style->WindowRounding              = 4.0f;
+        style->ChildRounding               = 4.0f;
+        style->PopupRounding               = 4.0f;
+        style->FrameRounding               = 4.0f;
+        style->ScrollbarRounding           = 4.0f;
+        style->GrabRounding                = 4.0f;
+        style->TabBorderSize               = 0.0f;
+        style->TabBarBorderSize            = 0.0f;
+        style->TabBarOverlineSize          = 0.0f;
+        style->TabRounding                 = 4.0f;
+        style->DockingSeparatorSize        = 0.0f;
+        style->Colors[ImGuiCol_WindowBg].w = 0.8f;
+    }
+
     SDL_ShowWindow(app->window);
 }
 
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
+    glDeleteVertexArrays(1, &app->vao);
+    glDeleteBuffers(1, &app->vbo);
+    glDeleteBuffers(1, &app->ebo);
+    glDeleteProgram(app->shader);
+    glDeleteShader(app->vshader);
+    glDeleteShader(app->fshader);
     if (app->ig_context) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
@@ -86,6 +117,92 @@ static void _chess_run(void* app_data) {
     i64 fcount       = 0;
     i64 fps          = 0;
 
+    f32 vertices[] = {
+        // pos               // color
+         0.0f,  0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  // top 
+         0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
+        -0.5f, -0.5f,  0.0f,  0.0f, 1.0f, 0.0f   // bottom left
+    };
+
+    u32 indices[] = {
+       0, 1, 2,
+    }; 
+
+    const char *vshader_source = "#version 460 core\n"
+    "layout (location = 0) in vec3 attr_pos;\n"
+    "layout (location = 1) in vec3 attr_color;\n"
+    "out vec3 color;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(attr_pos.x, attr_pos.y, attr_pos.z, 1.0);\n"
+    "   color = attr_color;"
+    "}\0";
+
+    const char *fshader_source = "#version 460 core\n"
+    "out vec4 frag_color;\n"
+    "in vec3 color;\n"
+    "void main()\n"
+    "{\n"
+    "   frag_color = vec4(color, 1.0f);\n"
+    "}\0";
+
+    app->vshader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(app->vshader, 1, &vshader_source, NULL);
+    glCompileShader(app->vshader); {
+        int  success;
+        char info_log[512];
+        glGetShaderiv(app->vshader, GL_COMPILE_STATUS, &success);
+
+        if(!success) {
+            glGetShaderInfoLog(app->vshader, 512, NULL, info_log);
+            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile vshader: %s\n", info_log);
+        }
+    }
+
+    app->fshader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(app->fshader, 1, &fshader_source, NULL);
+    glCompileShader(app->fshader); {
+        int  success;
+        char info_log[512];
+        glGetShaderiv(app->fshader, GL_COMPILE_STATUS, &success);
+
+        if(!success) {
+            glGetShaderInfoLog(app->fshader, 512, NULL, info_log);
+            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile fshader: %s\n", info_log);
+        }
+    }
+
+    app->shader = glCreateProgram();
+    glAttachShader(app->shader, app->vshader);
+    glAttachShader(app->shader, app->fshader);
+    glLinkProgram(app->shader); {
+        int  success;
+        char info_log[512];
+        glGetProgramiv(app->shader, GL_LINK_STATUS, &success);
+
+        if(!success) {
+            glGetProgramInfoLog(app->shader, 512, NULL, info_log);
+            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile shader: %s\n", info_log);
+        }
+    } glUseProgram(app->shader);
+
+    glGenVertexArrays(1, &app->vao);
+    glBindVertexArray(app->vao);
+
+    glGenBuffers(1, &app->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, app->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &app->ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
+
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
         delta_time   = curr_time - prev_time;
@@ -109,13 +226,34 @@ static void _chess_run(void* app_data) {
         ImGui_ImplSDL3_NewFrame();
         igNewFrame();
 
+        // docking environment
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+        ImGuiViewport* viewport = igGetMainViewport();
+        igSetNextWindowPos(viewport->Pos, 0, (ImVec2){0.0f, 0.0f});
+        igSetNextWindowSize(viewport->Size, 0);
+        igSetNextWindowViewport(viewport->ID);
+        igPushStyleVar_Float(ImGuiStyleVar_WindowRounding, 0.0f);
+        igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
+        igBegin("InvisibleWindow", NULL, window_flags);
+        igPopStyleVar(3);
+        ImGuiID dockspace_id = igGetID_Str("InvisibleWindowDockSpace");
+        igDockSpace(dockspace_id, (ImVec2){0.0f, 0.0f}, ImGuiDockNodeFlags_PassthruCentralNode, NULL);
+        igEnd();
+
         igShowDemoWindow(NULL);
-        igShowStyleEditor(igGetStyle());
 
         igRender();
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(app->shader);
+        glBindVertexArray(app->vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->ebo);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
         #ifdef IMGUI_HAS_DOCK
