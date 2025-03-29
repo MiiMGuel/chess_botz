@@ -21,6 +21,7 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/chess.c
     ${PROJECT_SOURCE_DIR}/src/logg.c
+    ${PROJECT_SOURCE_DIR}/src/shader.c
     
     ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
 

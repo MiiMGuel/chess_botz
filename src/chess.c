@@ -6,6 +6,7 @@
 #include "chess.h"
 #include "logg.h"
 #include "types.h"
+#include "shader.h"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
@@ -89,9 +90,7 @@ static void _chess_close(void* app_data) {
     glDeleteVertexArrays(1, &app->vao);
     glDeleteBuffers(1, &app->vbo);
     glDeleteBuffers(1, &app->ebo);
-    glDeleteProgram(app->shader);
-    glDeleteShader(app->vshader);
-    glDeleteShader(app->fshader);
+    shader_destroy(&app->shader);
     if (app->ig_context) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
@@ -128,7 +127,7 @@ static void _chess_run(void* app_data) {
        0, 1, 2,
     }; 
 
-    const char *vshader_source = "#version 460 core\n"
+    const char *vs_source = "#version 460 core\n"
     "layout (location = 0) in vec3 attr_pos;\n"
     "layout (location = 1) in vec3 attr_color;\n"
     "out vec3 color;\n"
@@ -138,7 +137,7 @@ static void _chess_run(void* app_data) {
     "   color = attr_color;"
     "}\0";
 
-    const char *fshader_source = "#version 460 core\n"
+    const char *fs_source = "#version 460 core\n"
     "out vec4 frag_color;\n"
     "in vec3 color;\n"
     "void main()\n"
@@ -146,45 +145,13 @@ static void _chess_run(void* app_data) {
     "   frag_color = vec4(color, 1.0f);\n"
     "}\0";
 
-    app->vshader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(app->vshader, 1, &vshader_source, NULL);
-    glCompileShader(app->vshader); {
-        int  success;
-        char info_log[512];
-        glGetShaderiv(app->vshader, GL_COMPILE_STATUS, &success);
-
-        if(!success) {
-            glGetShaderInfoLog(app->vshader, 512, NULL, info_log);
-            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile vshader: %s\n", info_log);
-        }
-    }
-
-    app->fshader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(app->fshader, 1, &fshader_source, NULL);
-    glCompileShader(app->fshader); {
-        int  success;
-        char info_log[512];
-        glGetShaderiv(app->fshader, GL_COMPILE_STATUS, &success);
-
-        if(!success) {
-            glGetShaderInfoLog(app->fshader, 512, NULL, info_log);
-            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile fshader: %s\n", info_log);
-        }
-    }
-
-    app->shader = glCreateProgram();
-    glAttachShader(app->shader, app->vshader);
-    glAttachShader(app->shader, app->fshader);
-    glLinkProgram(app->shader); {
-        int  success;
-        char info_log[512];
-        glGetProgramiv(app->shader, GL_LINK_STATUS, &success);
-
-        if(!success) {
-            glGetProgramInfoLog(app->shader, 512, NULL, info_log);
-            logg_fprintf(app->flog, LOGG_ERROR, "Failed compile shader: %s\n", info_log);
-        }
-    } glUseProgram(app->shader);
+    shader_create(&app->shader);
+    if (!shader_source(&app->shader, vs_source, fs_source))
+        logg_fprintf(
+            app->flog, LOGG_ERROR, 
+            "Failed to compile %s shader: %s\n", 
+            shader_geterr_stype(), shader_geterr_msg()
+        );
 
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
@@ -250,7 +217,7 @@ static void _chess_run(void* app_data) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(app->shader);
+        shader_activate(&app->shader);
         glBindVertexArray(app->vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->ebo);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

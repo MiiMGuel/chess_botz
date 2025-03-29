@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "types.h"
+#include "shader.h"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
@@ -21,12 +22,8 @@ typedef struct app_data {
     SDL_GLContext gl_context;
     SDL_Event     event;
     ImGuiContext* ig_context;
-    u32           shader,
-                  vshader,
-                  fshader,
-                  vao,
-                  vbo,
-                  ebo;
+    shader_t      shader;
+    u32 vao, vbo, ebo;
 } app_data_t;
 
 #endif // CHESS_H
