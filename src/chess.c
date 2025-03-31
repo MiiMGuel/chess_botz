@@ -51,6 +51,7 @@ static void _chess_start(void* app_data) {
     if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress))
         logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to initialize GLAD\n");
     
+    glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, app->window_width, app->window_height);
 
     app->ig_context = igCreateContext(NULL);
@@ -60,7 +61,7 @@ static void _chess_start(void* app_data) {
         "assets/JetBrainsMonoNerdFont-SemiBold.ttf", 32.0f, NULL, 
         ImFontAtlas_GetGlyphRangesDefault(io->Fonts)
     );
-    io->FontGlobalScale = 0.55f;
+    io->FontGlobalScale = 0.6f;
     io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     #ifdef IMGUI_HAS_DOCK
     io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -89,40 +90,21 @@ static void _chess_start(void* app_data) {
         style->DockingSeparatorSize        = 0.0f;
     }
 
-    SDL_ShowWindow(app->window);
-}
+    app->frame.width = 800;
+    app->frame.height = 600;
+    fbo_create(&app->frame.fbo); fbo_bind(app->frame.fbo);
+    texture_create(&app->frame.texture); texture_bind(app->frame.texture);
+    texture_param(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    texture_param(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    texture_image(NULL, app->frame.width, app->frame.height, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE, 0, false);
+    fbo_texture(app->frame.fbo, app->frame.texture, GL_COLOR_ATTACHMENT0, 0);
+    rbo_create(&app->frame.rbo); rbo_bind(app->frame.rbo);
+    rbo_storage(app->frame.rbo, GL_DEPTH24_STENCIL8, app->frame.width, app->frame.height);
+    fbo_rbo(app->frame.fbo, app->frame.rbo, GL_DEPTH_STENCIL_ATTACHMENT);
 
-static void _chess_close(void* app_data) {
-    app_data_t* app = (app_data_t*)app_data;
-    vao_destroy(&app->vao);
-    vbo_destroy(&app->vbo);
-    ebo_destroy(&app->ebo);
-    shader_destroy(&app->shader);
-    texture_destroy(&app->texture);
-    if (app->ig_context) {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
-        igDestroyContext(NULL);
-    } if (app->gl_context) SDL_GL_DestroyContext(app->gl_context);
-    if (app->window) SDL_DestroyWindow(app->window);
-    SDL_Quit(); fclose(app->flog); free(app);
-}
-
-static void _chess_run(void* app_data) {
-    app_data_t* app  = (app_data_t*)app_data;
-    ImGuiIO* io      = igGetIO_ContextPtr(app->ig_context);
-    f64 freq         = (f64)SDL_GetPerformanceFrequency();
-    f64 init         = (f64)SDL_GetPerformanceCounter() / freq;
-    f64 curr_time    = 0.0;
-    f64 prev_time    = 0.0;
-    f64 delta_time   = 0.0;
-    f64 cdelta_time  = 0.0;
-    u64 curr_tick    = SDL_GetTicks();
-    u64 prev_tick    = curr_tick;
-    u64 delta_tick   = 0.0;
-    u64 cdelta_tick  = 0.0;
-    i64 fcount       = 0;
-    i64 fps          = 0;
+    if (fbo_check() != GL_FRAMEBUFFER_COMPLETE) {
+        logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to create framebuffer!\n");
+    } fbo_bind(0);
 
     const char *vs_source = "#version 460 core\n"
     "layout (location = 0) in vec3 attr_pos;\n"
@@ -156,10 +138,10 @@ static void _chess_run(void* app_data) {
 
     f32 vertices[] = {
         // pos               // uv
-         0.5f,  0.5f,  0.0f,  0.0f, 1.0f,  // top right
-         0.5f, -0.5f,  0.0f,  0.0f, 0.0f,  // bottom right
-        -0.5f, -0.5f,  0.0f,  1.0f, 0.0f,  // bottom left
-        -0.5f,  0.5f,  0.0f,  1.0f, 1.0f   // top left
+         0.5f,  0.5f,  0.0f,  1.0f, 1.0f,  // top right
+         0.5f, -0.5f,  0.0f,  1.0f, 0.0f,  // bottom right
+        -0.5f, -0.5f,  0.0f,  0.0f, 0.0f,  // bottom left
+        -0.5f,  0.5f,  0.0f,  0.0f, 1.0f   // top left
     };
 
     attribute_t attributes[] = { {   
@@ -189,11 +171,50 @@ static void _chess_run(void* app_data) {
     ebo_bind(0);
 
     texture_loadx(
-        &app->texture, "assets/board/brown.bmp", 
+        &app->texture, "assets/pieces/merida.bmp", 
         GL_REPEAT, GL_REPEAT, 
-        GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR
+        GL_LINEAR, GL_LINEAR
     ); if (!app->texture) 
-        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/board/brown.bmp\"\n");
+        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/pieces/merida.bmp\"\n");
+
+    SDL_ShowWindow(app->window);
+}
+
+static void _chess_close(void* app_data) {
+    app_data_t* app = (app_data_t*)app_data;
+    vbo_destroy(&app->vbo);
+    ebo_destroy(&app->ebo);
+    vao_destroy(&app->vao);
+    shader_destroy(&app->shader);
+    texture_destroy(&app->texture);
+    fbo_destroy(&app->frame.fbo);
+    texture_destroy(&app->frame.texture);
+    rbo_destroy(&app->frame.rbo);
+    if (app->ig_context) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        igDestroyContext(NULL);
+    } if (app->gl_context) SDL_GL_DestroyContext(app->gl_context);
+    if (app->window) SDL_DestroyWindow(app->window);
+    SDL_Quit(); fclose(app->flog); free(app);
+}
+
+static void _chess_run(void* app_data) {
+    app_data_t* app   = (app_data_t*)app_data;
+    ImGuiIO* io       = igGetIO_ContextPtr(app->ig_context);
+    f64 freq          = (f64)SDL_GetPerformanceFrequency();
+    f64 init          = (f64)SDL_GetPerformanceCounter() / freq;
+    f64 curr_time     = 0.0;
+    f64 prev_time     = 0.0;
+    f64 delta_time    = 0.0;
+    f64 cdelta_time   = 0.0;
+    u64 curr_tick     = SDL_GetTicks();
+    u64 prev_tick     = curr_tick;
+    u64 delta_tick    = 0.0;
+    u64 cdelta_tick   = 0.0;
+    i64 fcount        = 0;
+    i64 fps           = 0;
+    ImVec2 frame_size = {.x = 800, .y = 600};
 
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
@@ -207,12 +228,47 @@ static void _chess_run(void* app_data) {
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
-            if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
-                app->window_width  = app->event.window.data1;
-                app->window_height = app->event.window.data2;
-                glViewport(0, 0, app->event.window.data1, app->event.window.data2);
+            // if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
+            //     app->window_width  = app->event.window.data1;
+            //     app->window_height = app->event.window.data2;
+            //     glViewport(0, 0, app->event.window.data1, app->event.window.data2);
+            // }
+            if (frame_size.x + frame_size.y != app->frame.width + app->frame.height) {
+                app->frame.width  = frame_size.x;
+                app->frame.height = frame_size.y;
+                fbo_destroy(&app->frame.fbo);
+                texture_destroy(&app->frame.texture);
+                rbo_destroy(&app->frame.rbo);
+                fbo_create(&app->frame.fbo); fbo_bind(app->frame.fbo);
+                texture_create(&app->frame.texture); texture_bind(app->frame.texture);
+                texture_param(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                texture_param(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                texture_image(NULL, app->frame.width, app->frame.height, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE, 0, false);
+                fbo_texture(app->frame.fbo, app->frame.texture, GL_COLOR_ATTACHMENT0, 0);
+                rbo_create(&app->frame.rbo); rbo_bind(app->frame.rbo);
+                rbo_storage(app->frame.rbo, GL_DEPTH24_STENCIL8, app->frame.width, app->frame.height);
+                fbo_rbo(app->frame.fbo, app->frame.rbo, GL_DEPTH_STENCIL_ATTACHMENT);
+    
+                if (fbo_check() != GL_FRAMEBUFFER_COMPLETE) {
+                    logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to create framebuffer!\n");
+                } fbo_bind(0);
             }
         }
+
+        fbo_bind(app->frame.fbo);
+        glViewport(0, 0, app->frame.width, app->frame.height);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app->texture);
+
+        shader_activate(app->shader);
+        vao_bind(app->vao);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        fbo_bind(0);
+        glClear(GL_COLOR_BUFFER_BIT);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
@@ -237,18 +293,12 @@ static void _chess_run(void* app_data) {
 
         igShowDemoWindow(NULL);
 
+        igBegin("framebuffer", NULL, 0);
+        igGetContentRegionAvail(&frame_size);
+        igImage(app->frame.texture, frame_size, (ImVec2){0, 1}, (ImVec2){1, 0});
+        igEnd();
+
         igRender();
-
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, app->texture);
-
-        shader_activate(app->shader);
-        vao_bind(app->vao);
-        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(u32), GL_UNSIGNED_INT, 0);
-
         ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
         #ifdef IMGUI_HAS_DOCK
 	    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {

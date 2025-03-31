@@ -14,11 +14,11 @@ void texture_loadx(texture_t* texture, const char* filename, u32 wrap_s, u32 wra
 void texture_destroy(texture_t* texture);
 void texture_bind(texture_t texture);
 void texture_param(u32 name, i32 param);
-void texture_mipmap(
+void texture_image(
     const void* data, 
     u64 width, u64 height, 
     i32 intern_format, u32 format, 
-    u32 type, i32 level
+    u32 type, i32 level, bool mipmap
 );
 
 #endif // TEXTURE_H

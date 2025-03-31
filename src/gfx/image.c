@@ -16,7 +16,10 @@ image_t* image_load(const char* filename) {
     if (image->data == NULL) {
         free(image);
         return NULL;
-    } else return image;
+    }
+    
+    stbi__vertical_flip(image->data, image->width, image->height, image->channels);
+    return image;
 }
 
 void image_destroy(image_t* image) {

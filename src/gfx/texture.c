@@ -28,8 +28,8 @@ void texture_load(texture_t* texture, const char* filename) {
         break;
     
     case 4:
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         break;
     
     default:
@@ -57,8 +57,8 @@ void texture_loadx(texture_t* texture, const char* filename, u32 wrap_s, u32 wra
             break;
     
         case 4:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+            glGenerateMipmap(GL_TEXTURE_2D);
             break;
     
         default:
@@ -80,12 +80,12 @@ void texture_bind(texture_t texture) {
 void texture_param(u32 name, i32 param) {
     glTexParameteri(GL_TEXTURE_2D, name, param);
 }
-void texture_mipmap(
+void texture_image(
     const void* data, 
     u64 width, u64 height, 
     i32 intern_format, u32 format, 
-    u32 type, i32 level
+    u32 type, i32 level, bool mipmap
 ) {
     glTexImage2D(GL_TEXTURE_2D, level, intern_format, width, height, 0, format, type, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
 }

@@ -33,6 +33,8 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/src/gfx/vao.c
     ${PROJECT_SOURCE_DIR}/src/gfx/vbo.c
     ${PROJECT_SOURCE_DIR}/src/gfx/ebo.c
+    ${PROJECT_SOURCE_DIR}/src/gfx/fbo.c
+    ${PROJECT_SOURCE_DIR}/src/gfx/rbo.c
     
     ${PROJECT_SOURCE_DIR}/lib/glad/src/glad.c
 
