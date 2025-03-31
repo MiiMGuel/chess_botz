@@ -1,7 +1,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include "types.h"
+#include "../types.h"
 
 typedef u32 shader_t;
 
@@ -21,5 +21,6 @@ void shader_uniform1fv(shader_t shader, const char* location, u64 count, f32* x)
 void shader_uniform2fv(shader_t shader, const char* location, u64 count, f32* x);
 void shader_uniform3fv(shader_t shader, const char* location, u64 count, f32* x);
 void shader_uniform4fv(shader_t shader, const char* location, u64 count, f32* x);
+void shader_uniform4mfv(shader_t shader, const char* location, u64 count, bool transpose, f32* mat);
 
 #endif // SHADER_H

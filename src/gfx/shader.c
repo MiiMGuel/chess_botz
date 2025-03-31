@@ -113,3 +113,7 @@ void shader_uniform3fv(shader_t shader, const char* location, u64 count, f32* x)
 void shader_uniform4fv(shader_t shader, const char* location, u64 count, f32* x) {
     glUniform4fv(glGetUniformLocation(shader, location), count, x);
 }
+
+void shader_uniform4mfv(shader_t shader, const char* location, u64 count, bool transpose, f32* mat) {
+    glUniformMatrix4fv(glGetUniformLocation(shader, location), count, transpose, mat);
+}

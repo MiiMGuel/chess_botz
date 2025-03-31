@@ -7,6 +7,7 @@
 #include "logg.h"
 #include "types.h"
 #include "gfx/gfx.h"
+#include "cglm/cglm.h"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
@@ -14,6 +15,24 @@
 #define CIMGUI_USE_SDL3
 #include "cimgui/cimgui.h"
 #include "cimgui/cimgui_impl.h"
+
+static void _igCreateDockingEnv(void) {
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+    ImGuiViewport* viewport = igGetMainViewport();
+    igSetNextWindowPos(viewport->Pos, 0, (ImVec2){0.0f, 0.0f});
+    igSetNextWindowSize(viewport->Size, 0);
+    igSetNextWindowViewport(viewport->ID);
+    igPushStyleVar_Float(ImGuiStyleVar_WindowRounding, 0.0f);
+    igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
+    igBegin("InvisibleWindow", NULL, window_flags);
+    igPopStyleVar(3);
+    ImGuiID dockspace_id = igGetID_Str("InvisibleWindowDockSpace");
+    igDockSpace(dockspace_id, (ImVec2){0.0f, 0.0f}, ImGuiDockNodeFlags_PassthruCentralNode, NULL);
+    igEnd();
+}
 
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
@@ -84,7 +103,7 @@ static void _chess_start(void* app_data) {
         style->TabBarBorderSize            = 0.0f;
         style->TabBarOverlineSize          = 0.0f;
         style->TabRounding                 = 4.0f;
-        style->DockingSeparatorSize        = 0.0f;
+        style->DockingSeparatorSize        = 2.5f;
     }
 
     frame_create(&app->frame, app->window_width, app->window_height);
@@ -96,17 +115,17 @@ static void _chess_start(void* app_data) {
     const char *vs_source = "#version 460 core\n"
     "layout (location = 0) in vec3 attr_pos;\n"
     "layout (location = 1) in vec2 attr_uv;\n"
-    "out vec3 color;\n"
     "out vec2 uv_coord;\n"
+    "uniform mat4 model;\n"
+    "uniform mat4 view;\n"
+    "uniform mat4 proj;\n"
     "void main() {\n"
-    "   gl_Position = vec4(attr_pos.x, attr_pos.y, attr_pos.z, 1.0);\n"
-    "   // color       = attr_color;\n"
+    "   gl_Position = proj * view * model * vec4(attr_pos, 1.0);\n"
     "   uv_coord    = attr_uv;\n"
     "}";
 
     const char *fs_source = "#version 460 core\n"
     "out vec4 frag_color;\n"
-    "in vec3 color;\n"
     "in vec2 uv_coord;\n"
     "uniform sampler2D tid;\n"
     "void main() {\n"
@@ -124,11 +143,47 @@ static void _chess_start(void* app_data) {
     shader_uniform1i(app->shader, "tid", 0);
 
     f32 vertices[] = {
-        // pos               // uv
-         0.5f,  0.5f,  0.0f,  1.0f, 1.0f,  // top right
-         0.5f, -0.5f,  0.0f,  1.0f, 0.0f,  // bottom right
-        -0.5f, -0.5f,  0.0f,  0.0f, 0.0f,  // bottom left
-        -0.5f,  0.5f,  0.0f,  0.0f, 1.0f   // top left
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
     attribute_t attributes[] = { {   
@@ -142,16 +197,11 @@ static void _chess_start(void* app_data) {
         }
     };
 
-    u32 indices[] = {
-       0, 1, 2,
-       0, 2, 3
-    }; 
-
     vao_create(&app->vao); vao_bind(app->vao);
     vbo_create(&app->vbo); vbo_bind(app->vbo);
     vbo_buffer(app->vbo, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    ebo_create(&app->ebo); ebo_bind(app->ebo);
-    ebo_buffer(app->ebo, sizeof(indices), indices, GL_STATIC_DRAW);
+    // ebo_create(&app->ebo); ebo_bind(app->ebo);
+    // ebo_buffer(app->ebo, sizeof(indices), indices, GL_STATIC_DRAW);
     vao_attributes(attributes, sizeof(attributes) / sizeof(attribute_t));
 
     texture_loadx(
@@ -167,7 +217,7 @@ static void _chess_start(void* app_data) {
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
     vbo_destroy(&app->vbo);
-    ebo_destroy(&app->ebo);
+    // ebo_destroy(&app->ebo);
     vao_destroy(&app->vao);
     shader_destroy(&app->shader);
     texture_destroy(&app->texture);
@@ -184,82 +234,92 @@ static void _chess_close(void* app_data) {
 static void _chess_run(void* app_data) {
     app_data_t* app   = (app_data_t*)app_data;
     ImGuiIO* io       = igGetIO_ContextPtr(app->ig_context);
-    f64 freq          = (f64)SDL_GetPerformanceFrequency();
-    f64 init          = (f64)SDL_GetPerformanceCounter() / freq;
-    f64 curr_time     = 0.0;
+    f64 curr_time     = (f64)SDL_GetTicksNS() / 1000000000.0f;
     f64 prev_time     = 0.0;
     f64 delta_time    = 0.0;
     f64 cdelta_time   = 0.0;
-    u64 curr_tick     = SDL_GetTicks();
-    u64 prev_tick     = curr_tick;
-    u64 delta_tick    = 0.0;
-    u64 cdelta_tick   = 0.0;
+    f32 curr_tick     = (f32)SDL_GetTicks() / 1000.0f;
+    f32 prev_tick     = curr_tick;
+    f32 delta_tick    = 0.0;
+    f32 cdelta_tick   = 0.0;
     i64 fcount        = 0;
     i64 fps           = 0;
+    ImVec2 frame_size = {
+        .x = app->window_width, 
+        .y = app->window_height
+    }; 
+
+    mat4 model, view, proj;
+    glm_mat4_identity(model);
+    glm_mat4_identity(view);
+    glm_mat4_identity(proj);
+    glm_translate(view, (vec3){0.0f, 0.0f, -3.0f});
 
     while (true) {
-        curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
+        curr_time    = (f64)SDL_GetTicksNS() / 1000000000.0f;
         delta_time   = curr_time - prev_time;
         cdelta_time += delta_time;
 
-        curr_tick    = SDL_GetTicks();
+        curr_tick    = (f32)SDL_GetTicks() / 1000.0f;
         delta_tick   = curr_tick - prev_tick;
         cdelta_tick += delta_tick;
 
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
-            if (app->event.type == SDL_EVENT_WINDOW_RESIZED &&
-                app->event.window.windowID == SDL_GetWindowID(app->window)
-            ) {
-                app->window_width  = app->event.window.data1;
-                app->window_height = app->event.window.data2;
-                frame_resize(&app->frame, app->window_width, app->window_height);
-                glViewport(0, 0, app->event.window.data1, app->event.window.data2);
-            }
+            // if (app->event.type == SDL_EVENT_WINDOW_RESIZED &&
+            //     app->event.window.windowID == SDL_GetWindowID(app->window)
+            // ) {
+            //     app->window_width  = app->event.window.data1;
+            //     app->window_height = app->event.window.data2;
+            //     frame_resize(&app->frame, app->window_width, app->window_height);
+            //     glViewport(0, 0, app->event.window.data1, app->event.window.data2);
+            // }
+            if (frame_size.x + frame_size.y != app->frame.width + app->frame.height) 
+                frame_resize(&app->frame, frame_size.x, frame_size.y);
         }
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         frame_begin(&app->frame);
 
+        glm_rotate(model, (f32)1.0f * delta_time, (vec3){0.5f, 1.0f, 0.0f});
+        glm_perspective(glm_rad(45.0f), (f32)app->frame.width / (f32)app->frame.height, 0.1f, 100.0f, proj);
+
+        shader_activate(app->shader);
+        shader_uniform4mfv(app->shader, "model", 1, false, (f32*)model);
+        shader_uniform4mfv(app->shader, "view", 1, false, (f32*)view);
+        shader_uniform4mfv(app->shader, "proj", 1, false, (f32*)proj);
+
         shader_activate(app->shader);
         texture_activate(app->texture, 0);
         vao_bind(app->vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         frame_end(&app->frame);
-        glDisable(GL_DEPTH_TEST);
+
         glClearColor(0.08f, 0.08f, 0.08f, 1.0f);
+        glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        frame_draw(&app->frame);
+        // frame_draw(&app->frame);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         igNewFrame();
 
-        // docking environment
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
-        ImGuiViewport* viewport = igGetMainViewport();
-        igSetNextWindowPos(viewport->Pos, 0, (ImVec2){0.0f, 0.0f});
-        igSetNextWindowSize(viewport->Size, 0);
-        igSetNextWindowViewport(viewport->ID);
-        igPushStyleVar_Float(ImGuiStyleVar_WindowRounding, 0.0f);
-        igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        _igCreateDockingEnv();
+        igShowDemoWindow(NULL);
+        
         igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
-        igBegin("InvisibleWindow", NULL, window_flags);
-        igPopStyleVar(3);
-        ImGuiID dockspace_id = igGetID_Str("InvisibleWindowDockSpace");
-        igDockSpace(dockspace_id, (ImVec2){0.0f, 0.0f}, ImGuiDockNodeFlags_PassthruCentralNode, NULL);
+        igBegin("framebuffer", NULL, 0); igPopStyleVar(1);
+        igGetContentRegionAvail(&frame_size);
+        igImage(app->frame.texture, frame_size, (ImVec2){0, 1}, (ImVec2){1, 0});
         igEnd();
 
-        igShowDemoWindow(NULL);
-
-        igBegin("framebuffer", NULL, 0);
-        ImVec2 frame_size; igGetContentRegionAvail(&frame_size);
-        igImage(app->frame.texture, frame_size, (ImVec2){0, 1}, (ImVec2){1, 0});
+        igBegin("Performance", NULL, 0);
+        igText("time  : %.3f", curr_tick);
+        igText("delta : %.3f", delta_tick);
+        igText("fps   : %d", fps);
         igEnd();
 
         igRender();
