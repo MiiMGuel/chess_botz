@@ -77,6 +77,11 @@ void texture_bind(texture_t texture) {
     glBindTexture(GL_TEXTURE_2D, texture);
 }
 
+void texture_activate(texture_t texture, u32 a) {
+    glActiveTexture(a);
+    glBindTexture(GL_TEXTURE_2D, texture);
+}
+
 void texture_param(u32 name, i32 param) {
     glTexParameteri(GL_TEXTURE_2D, name, param);
 }

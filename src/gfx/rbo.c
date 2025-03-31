@@ -1,7 +1,4 @@
 #include "rbo.h"
-#include "../types.h"
-#include "texture.h"
-#include "glad/glad.h"
 
 void rbo_create(rbo_t* rbo) {
     glGenRenderbuffers(1, rbo);

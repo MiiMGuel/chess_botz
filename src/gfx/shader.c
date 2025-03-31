@@ -1,6 +1,5 @@
 #include "shader.h"
-#include "types.h"
-#include "logg.h"
+#include "../logg.h"
 #include "glad/glad.h"
 
 static char* _error_stypes[] = {

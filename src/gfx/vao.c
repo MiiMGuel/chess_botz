@@ -1,5 +1,4 @@
 #include "vao.h"
-#include "../types.h"
 #include "glad/glad.h"
 
 void vao_create(vao_t* vao) {

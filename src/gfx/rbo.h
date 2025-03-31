@@ -2,7 +2,6 @@
 #define RBO_H
 
 #include "../types.h"
-#include "texture.h"
 #include "glad/glad.h"
 
 typedef u32 rbo_t;

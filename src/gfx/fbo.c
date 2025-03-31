@@ -1,7 +1,4 @@
 #include "fbo.h"
-#include "../types.h"
-#include "texture.h"
-#include "glad/glad.h"
 
 void fbo_create(fbo_t* fbo) {
     glGenFramebuffers(1, fbo);

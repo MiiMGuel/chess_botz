@@ -1,5 +1,4 @@
 #include "ebo.h"
-#include "../types.h"
 #include "glad/glad.h"
 
 void ebo_create(ebo_t* ebo) {

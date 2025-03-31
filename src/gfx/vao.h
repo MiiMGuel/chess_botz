@@ -2,7 +2,6 @@
 #define VAO_H
 
 #include "../types.h"
-#include "glad/glad.h"
 
 typedef u32 vao_t;
 

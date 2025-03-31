@@ -1,5 +1,4 @@
 #include "vbo.h"
-#include "../types.h"
 #include "glad/glad.h"
 
 void vbo_create(vbo_t* vbo) {

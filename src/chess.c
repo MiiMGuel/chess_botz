@@ -6,10 +6,7 @@
 #include "chess.h"
 #include "logg.h"
 #include "types.h"
-#include "gfx/shader.h"
-#include "gfx/vao.h"
-#include "gfx/vbo.h"
-#include "gfx/ebo.h"
+#include "gfx/gfx.h"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
@@ -90,17 +87,7 @@ static void _chess_start(void* app_data) {
         style->DockingSeparatorSize        = 0.0f;
     }
 
-    app->frame.width = 800;
-    app->frame.height = 600;
-    fbo_create(&app->frame.fbo); fbo_bind(app->frame.fbo);
-    texture_create(&app->frame.texture); texture_bind(app->frame.texture);
-    texture_param(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    texture_param(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    texture_image(NULL, app->frame.width, app->frame.height, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE, 0, false);
-    fbo_texture(app->frame.fbo, app->frame.texture, GL_COLOR_ATTACHMENT0, 0);
-    rbo_create(&app->frame.rbo); rbo_bind(app->frame.rbo);
-    rbo_storage(app->frame.rbo, GL_DEPTH24_STENCIL8, app->frame.width, app->frame.height);
-    fbo_rbo(app->frame.fbo, app->frame.rbo, GL_DEPTH_STENCIL_ATTACHMENT);
+    frame_create(&app->frame, app->window_width, app->window_height);
 
     if (fbo_check() != GL_FRAMEBUFFER_COMPLETE) {
         logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to create framebuffer!\n");
@@ -121,9 +108,9 @@ static void _chess_start(void* app_data) {
     "out vec4 frag_color;\n"
     "in vec3 color;\n"
     "in vec2 uv_coord;\n"
-    "uniform sampler2D tid_0;\n"
+    "uniform sampler2D tid;\n"
     "void main() {\n"
-    "   frag_color = texture(tid_0, uv_coord);\n"
+    "   frag_color = texture(tid, uv_coord);\n"
     "}";
 
     shader_create(&app->shader);
@@ -134,7 +121,7 @@ static void _chess_start(void* app_data) {
             shader_geterr_stype(), shader_geterr_msg()
         );
     
-    shader_uniform1i(app->shader, "tid_0", 0);
+    shader_uniform1i(app->shader, "tid", 0);
 
     f32 vertices[] = {
         // pos               // uv
@@ -166,16 +153,13 @@ static void _chess_start(void* app_data) {
     ebo_create(&app->ebo); ebo_bind(app->ebo);
     ebo_buffer(app->ebo, sizeof(indices), indices, GL_STATIC_DRAW);
     vao_attributes(attributes, sizeof(attributes) / sizeof(attribute_t));
-    vao_bind(0);
-    vbo_bind(0);
-    ebo_bind(0);
 
     texture_loadx(
-        &app->texture, "assets/pieces/merida.bmp", 
+        &app->texture, "assets/board/brown.bmp", 
         GL_REPEAT, GL_REPEAT, 
         GL_LINEAR, GL_LINEAR
     ); if (!app->texture) 
-        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/pieces/merida.bmp\"\n");
+        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/board/brown.bmp\"\n");
 
     SDL_ShowWindow(app->window);
 }
@@ -187,9 +171,7 @@ static void _chess_close(void* app_data) {
     vao_destroy(&app->vao);
     shader_destroy(&app->shader);
     texture_destroy(&app->texture);
-    fbo_destroy(&app->frame.fbo);
-    texture_destroy(&app->frame.texture);
-    rbo_destroy(&app->frame.rbo);
+    frame_destroy(&app->frame);
     if (app->ig_context) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
@@ -214,7 +196,6 @@ static void _chess_run(void* app_data) {
     u64 cdelta_tick   = 0.0;
     i64 fcount        = 0;
     i64 fps           = 0;
-    ImVec2 frame_size = {.x = 800, .y = 600};
 
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
@@ -228,47 +209,28 @@ static void _chess_run(void* app_data) {
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
-            // if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
-            //     app->window_width  = app->event.window.data1;
-            //     app->window_height = app->event.window.data2;
-            //     glViewport(0, 0, app->event.window.data1, app->event.window.data2);
-            // }
-            if (frame_size.x + frame_size.y != app->frame.width + app->frame.height) {
-                app->frame.width  = frame_size.x;
-                app->frame.height = frame_size.y;
-                fbo_destroy(&app->frame.fbo);
-                texture_destroy(&app->frame.texture);
-                rbo_destroy(&app->frame.rbo);
-                fbo_create(&app->frame.fbo); fbo_bind(app->frame.fbo);
-                texture_create(&app->frame.texture); texture_bind(app->frame.texture);
-                texture_param(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                texture_param(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                texture_image(NULL, app->frame.width, app->frame.height, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE, 0, false);
-                fbo_texture(app->frame.fbo, app->frame.texture, GL_COLOR_ATTACHMENT0, 0);
-                rbo_create(&app->frame.rbo); rbo_bind(app->frame.rbo);
-                rbo_storage(app->frame.rbo, GL_DEPTH24_STENCIL8, app->frame.width, app->frame.height);
-                fbo_rbo(app->frame.fbo, app->frame.rbo, GL_DEPTH_STENCIL_ATTACHMENT);
-    
-                if (fbo_check() != GL_FRAMEBUFFER_COMPLETE) {
-                    logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to create framebuffer!\n");
-                } fbo_bind(0);
+            if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
+                app->window_width  = app->event.window.data1;
+                app->window_height = app->event.window.data2;
+                frame_resize(&app->frame, app->window_width, app->window_height);
+                glViewport(0, 0, app->event.window.data1, app->event.window.data2);
             }
         }
 
-        fbo_bind(app->frame.fbo);
-        glViewport(0, 0, app->frame.width, app->frame.height);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, app->texture);
+        frame_begin(&app->frame);
 
         shader_activate(app->shader);
+        texture_activate(app->texture, 0);
         vao_bind(app->vao);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-        fbo_bind(0);
+        frame_end(&app->frame);
+        glDisable(GL_DEPTH_TEST);
+        glClearColor(0.08f, 0.08f, 0.08f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        frame_draw(&app->frame);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
@@ -294,7 +256,7 @@ static void _chess_run(void* app_data) {
         igShowDemoWindow(NULL);
 
         igBegin("framebuffer", NULL, 0);
-        igGetContentRegionAvail(&frame_size);
+        ImVec2 frame_size; igGetContentRegionAvail(&frame_size);
         igImage(app->frame.texture, frame_size, (ImVec2){0, 1}, (ImVec2){1, 0});
         igEnd();
 
