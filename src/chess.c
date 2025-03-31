@@ -209,7 +209,9 @@ static void _chess_run(void* app_data) {
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
-            if (app->event.type == SDL_EVENT_WINDOW_RESIZED) {
+            if (app->event.type == SDL_EVENT_WINDOW_RESIZED &&
+                app->event.window.windowID == SDL_GetWindowID(app->window)
+            ) {
                 app->window_width  = app->event.window.data1;
                 app->window_height = app->event.window.data2;
                 frame_resize(&app->frame, app->window_width, app->window_height);
