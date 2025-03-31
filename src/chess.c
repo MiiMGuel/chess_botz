@@ -6,7 +6,10 @@
 #include "chess.h"
 #include "logg.h"
 #include "types.h"
-#include "shader.h"
+#include "gfx/shader.h"
+#include "gfx/vao.h"
+#include "gfx/vbo.h"
+#include "gfx/ebo.h"
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
 
@@ -53,6 +56,11 @@ static void _chess_start(void* app_data) {
     app->ig_context = igCreateContext(NULL);
     igSetCurrentContext(app->ig_context);
     ImGuiIO* io     = igGetIO_ContextPtr(app->ig_context);
+    ImFont* jmn = ImFontAtlas_AddFontFromFileTTF(io->Fonts, 
+        "assets/JetBrainsMonoNerdFont-SemiBold.ttf", 32.0f, NULL, 
+        ImFontAtlas_GetGlyphRangesDefault(io->Fonts)
+    );
+    io->FontGlobalScale = 0.55f;
     io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     #ifdef IMGUI_HAS_DOCK
     io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -79,7 +87,6 @@ static void _chess_start(void* app_data) {
         style->TabBarOverlineSize          = 0.0f;
         style->TabRounding                 = 4.0f;
         style->DockingSeparatorSize        = 0.0f;
-        style->Colors[ImGuiCol_WindowBg].w = 0.8f;
     }
 
     SDL_ShowWindow(app->window);
@@ -87,10 +94,11 @@ static void _chess_start(void* app_data) {
 
 static void _chess_close(void* app_data) {
     app_data_t* app = (app_data_t*)app_data;
-    glDeleteVertexArrays(1, &app->vao);
-    glDeleteBuffers(1, &app->vbo);
-    glDeleteBuffers(1, &app->ebo);
+    vao_destroy(&app->vao);
+    vbo_destroy(&app->vbo);
+    ebo_destroy(&app->ebo);
     shader_destroy(&app->shader);
+    texture_destroy(&app->texture);
     if (app->ig_context) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
@@ -116,59 +124,76 @@ static void _chess_run(void* app_data) {
     i64 fcount       = 0;
     i64 fps          = 0;
 
-    f32 vertices[] = {
-        // pos               // color
-         0.0f,  0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  // top 
-         0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
-        -0.5f, -0.5f,  0.0f,  0.0f, 1.0f, 0.0f   // bottom left
-    };
-
-    u32 indices[] = {
-       0, 1, 2,
-    }; 
-
     const char *vs_source = "#version 460 core\n"
     "layout (location = 0) in vec3 attr_pos;\n"
-    "layout (location = 1) in vec3 attr_color;\n"
+    "layout (location = 1) in vec2 attr_uv;\n"
     "out vec3 color;\n"
-    "void main()\n"
-    "{\n"
+    "out vec2 uv_coord;\n"
+    "void main() {\n"
     "   gl_Position = vec4(attr_pos.x, attr_pos.y, attr_pos.z, 1.0);\n"
-    "   color = attr_color;"
-    "}\0";
+    "   // color       = attr_color;\n"
+    "   uv_coord    = attr_uv;\n"
+    "}";
 
     const char *fs_source = "#version 460 core\n"
     "out vec4 frag_color;\n"
     "in vec3 color;\n"
-    "void main()\n"
-    "{\n"
-    "   frag_color = vec4(color, 1.0f);\n"
-    "}\0";
+    "in vec2 uv_coord;\n"
+    "uniform sampler2D tid_0;\n"
+    "void main() {\n"
+    "   frag_color = texture(tid_0, uv_coord);\n"
+    "}";
 
     shader_create(&app->shader);
-    if (!shader_source(&app->shader, vs_source, fs_source))
+    if (!shader_source(app->shader, vs_source, fs_source))
         logg_fprintf(
             app->flog, LOGG_ERROR, 
             "Failed to compile %s shader: %s\n", 
             shader_geterr_stype(), shader_geterr_msg()
         );
+    
+    shader_uniform1i(app->shader, "tid_0", 0);
 
-    glGenVertexArrays(1, &app->vao);
-    glBindVertexArray(app->vao);
+    f32 vertices[] = {
+        // pos               // uv
+         0.5f,  0.5f,  0.0f,  0.0f, 1.0f,  // top right
+         0.5f, -0.5f,  0.0f,  0.0f, 0.0f,  // bottom right
+        -0.5f, -0.5f,  0.0f,  1.0f, 0.0f,  // bottom left
+        -0.5f,  0.5f,  0.0f,  1.0f, 1.0f   // top left
+    };
 
-    glGenBuffers(1, &app->vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, app->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    attribute_t attributes[] = { {   
+            .norm = GL_FALSE, .type = GL_FLOAT,
+            .index = 0, .offset = 0 * sizeof(f32),
+            .size = 3, .stride = 5 * sizeof(f32)
+        }, {
+            .norm = GL_FALSE, .type = GL_FLOAT,
+            .index = 1, .offset = 3 * sizeof(f32),
+            .size = 2, .stride = 5 * sizeof(f32)
+        }
+    };
 
-    glGenBuffers(1, &app->ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    u32 indices[] = {
+       0, 1, 2,
+       0, 2, 3
+    }; 
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    vao_create(&app->vao); vao_bind(app->vao);
+    vbo_create(&app->vbo); vbo_bind(app->vbo);
+    vbo_buffer(app->vbo, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    ebo_create(&app->ebo); ebo_bind(app->ebo);
+    ebo_buffer(app->ebo, sizeof(indices), indices, GL_STATIC_DRAW);
+    vao_attributes(attributes, sizeof(attributes) / sizeof(attribute_t));
+    vao_bind(0);
+    vbo_bind(0);
+    ebo_bind(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-    glEnableVertexAttribArray(1);
+    texture_loadx(
+        &app->texture, "assets/board/brown.bmp", 
+        GL_REPEAT, GL_REPEAT, 
+        GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR
+    ); if (!app->texture) 
+        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/board/brown.bmp\"\n");
 
     while (true) {
         curr_time    = ((f64)SDL_GetPerformanceCounter() / freq) - init;
@@ -217,10 +242,12 @@ static void _chess_run(void* app_data) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader_activate(&app->shader);
-        glBindVertexArray(app->vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->ebo);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app->texture);
+
+        shader_activate(app->shader);
+        vao_bind(app->vao);
+        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(u32), GL_UNSIGNED_INT, 0);
 
         ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
         #ifdef IMGUI_HAS_DOCK
