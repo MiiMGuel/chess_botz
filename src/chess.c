@@ -260,11 +260,15 @@ static void _chess_run(void* app_data) {
     f64 cdelta_time   = 0.0;
     i64 fcount        = 0;
     i64 fps           = 0;
-    mat4 model, view, proj;
+    bool cube_spin    = false;
+    bool show_poly    = false;
+    vec3 cam_pos      = {0.0f, 0.0f,  3.0f};
+    vec3 cam_front    = {0.0f, 0.0f, -1.0f};
+    vec3 cam_up       = {0.0f, 1.0f,  0.0f};
+    mat4 model, cam_view, cam_proj;
     glm_mat4_identity(model);
-    glm_mat4_identity(view);
-    glm_mat4_identity(proj);
-    glm_translate(view, (vec3){0.0f, 0.0f, -3.0f});
+    glm_mat4_identity(cam_view);
+    glm_mat4_identity(cam_proj);
 
     while (true) {
         curr_time    = (f64)SDL_GetTicksNS() / 1000000000.0f;
@@ -287,13 +291,15 @@ static void _chess_run(void* app_data) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         frame_begin(&app->frame);
 
-        glm_rotate(model, (f32)1.0f * delta_time, (vec3){0.5f, 1.0f, 0.0f});
-        glm_perspective(glm_rad(45.0f), (f32)app->frame.width / (f32)app->frame.height, 0.1f, 100.0f, proj);
+        if (cube_spin) glm_rotate(model, (f32)1.0f * delta_time, (vec3){0.5f, 1.0f, 0.0f});
+        vec3 cam_center; glm_vec3_add(cam_pos, cam_front, cam_center);
+        glm_lookat_rh(cam_pos, cam_center, cam_up, cam_view);
+        glm_perspective(glm_rad(45.0f), (f32)app->frame.width / (f32)app->frame.height, 0.1f, 100.0f, cam_proj);
 
         shader_activate(app->shader);
         shader_uniform4mfv(app->shader, "model", 1, false, (f32*)model);
-        shader_uniform4mfv(app->shader, "view", 1, false, (f32*)view);
-        shader_uniform4mfv(app->shader, "proj", 1, false, (f32*)proj);
+        shader_uniform4mfv(app->shader, "view", 1, false, (f32*)cam_view);
+        shader_uniform4mfv(app->shader, "proj", 1, false, (f32*)cam_proj);
 
         shader_activate(app->shader);
         texture_activate(app->texture, 0);
@@ -317,15 +323,36 @@ static void _chess_run(void* app_data) {
         
         igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
         igBegin("framebuffer", NULL, 0); igPopStyleVar(1);
-        ImVec2 prev_size;
-        ImVec2 curr_size; igGetContentRegionAvail(&curr_size);
-        igImage(app->frame.texture, curr_size, (ImVec2){0, 1}, (ImVec2){1, 0});
+        static ImVec2 prev_size = {0, 0};
+        static ImVec2 curr_size = {0, 0}; igGetContentRegionAvail(&curr_size);
+        igImage(app->frame.texture, curr_size, (ImVec2){0,1}, (ImVec2){1,0});
         igEnd();
 
         igBegin("Performance", NULL, 0);
         igText("time  : %.3f", curr_time);
         igText("delta : %.3f", delta_time);
         igText("fps   : %d", fps);
+        igEnd();
+
+        igBegin("Camera", NULL, 0);
+        igSeparatorText("Position");
+        igInputFloat("pos.x", &cam_pos[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("pos.y", &cam_pos[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("pos.z", &cam_pos[2], 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Front");
+        igInputFloat("front.x", &cam_front[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("front.y", &cam_front[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("front.z", &cam_front[2], 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Up");
+        igInputFloat("up.x", &cam_up[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("up.y", &cam_up[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("up.z", &cam_up[2], 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Other");
+        if (igCheckbox("polygon line", &show_poly))
+            if (show_poly) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (igCheckbox("cube spin", &cube_spin))
+            glm_mat4_identity(model);
         igEnd();
 
         igRender();
