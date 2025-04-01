@@ -9,6 +9,7 @@ void shader_create(shader_t* shader);
 void shader_destroy(shader_t* shader);
 void shader_activate(shader_t shader);
 i32 shader_source(shader_t shader, const char* vs_source, const char* fs_source);
+i32 shader_load(shader_t shader, const char* vs_filename, const char* fs_filename);
 const char* shader_geterr_msg(void);
 const char* shader_geterr_stype(void);
 const char* shader_geterr_filename(void);

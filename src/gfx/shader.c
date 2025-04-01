@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "shader.h"
 #include "../logg.h"
 #include "glad/glad.h"
@@ -5,11 +9,25 @@
 static char* _error_stypes[] = {
     "PROGRAM",
     "VERTEX",
-    "FRAGMENT"
+    "FRAGMENT",
 };
 static char _error_log[512];
 static char _error_filename[512];
 static char _error_stype;
+
+static char* _file_getstr(const char* filename) {
+    u64   size = 0;
+    char* str  = NULL;
+    FILE* file = fopen(filename, "rb");
+    if (file) {
+        fseek(file, 0, SEEK_END);
+        size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        str  = malloc(size);
+        fread(str, 1, size, file);
+        fclose(file);
+    } return str;
+}
 
 void shader_create(shader_t* shader) {
     *shader = glCreateProgram();
@@ -63,6 +81,71 @@ i32 shader_source(shader_t shader, const char* vs_source, const char* fs_source)
     
     glDeleteShader(vshader);
     glDeleteShader(fshader);
+    return success;
+}
+
+i32 shader_load(shader_t shader, const char* vs_filename, const char* fs_filename) {
+    i32 success;
+    char* vs_source = _file_getstr(vs_filename);
+    char* fs_source = _file_getstr(fs_filename);
+
+    if (vs_source == NULL) {
+        strcpy(_error_log, "file not found!");
+        strcpy(_error_filename, vs_filename);
+        return 1;
+    } if (fs_source == NULL) {
+        strcpy(_error_log, "file not found!");
+        strcpy(_error_filename, fs_filename);
+        free(vs_source);
+        return 1;
+    }
+
+    u32 vshader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vshader, 1, &vs_source, NULL);
+    glCompileShader(vshader);
+    glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        _error_stype = 1;
+        glGetShaderInfoLog(vshader, 512, NULL, _error_log);
+        glDeleteShader(vshader);
+        strcpy(_error_filename, vs_filename);
+        free(vs_source);
+        free(fs_source);
+        return success;
+    }
+
+    u32 fshader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fshader, 1, &fs_source, NULL);
+    glCompileShader(fshader);
+    glGetShaderiv(fshader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        _error_stype = 2;
+        glGetShaderInfoLog(fshader, 512, NULL, _error_log);
+        glDeleteShader(fshader);
+        strcpy(_error_filename, fs_filename);
+        free(vs_source);
+        free(fs_source);
+        return success;
+    }
+
+    glAttachShader(shader, vshader);
+    glAttachShader(shader, fshader);
+    glLinkProgram(shader);
+    glGetProgramiv(shader, GL_LINK_STATUS, &success);
+    if(!success) {
+        _error_stype = 0;
+        glGetProgramInfoLog(shader, 512, NULL, _error_log);
+        glDeleteShader(vshader);
+        glDeleteShader(fshader);
+        free(vs_source);
+        free(fs_source);
+        return success;
+    }
+    
+    glDeleteShader(vshader);
+    glDeleteShader(fshader);
+    free(vs_source);
+    free(fs_source);
     return success;
 }
 

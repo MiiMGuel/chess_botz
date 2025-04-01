@@ -66,6 +66,7 @@ void frame_create(frame_t* frame, u64 width, u64 height) {
     rbo_create(&frame->rbo); rbo_bind(frame->rbo);
     rbo_storage(frame->rbo, GL_DEPTH24_STENCIL8, frame->width, frame->height);
     fbo_rbo(frame->fbo, frame->rbo, GL_DEPTH_STENCIL_ATTACHMENT);
+    fbo_bind(0);
 }
 
 void frame_destroy(frame_t* frame) {
@@ -97,6 +98,7 @@ void frame_resize(frame_t* frame, u64 width, u64 height) {
     rbo_create(&frame->rbo); rbo_bind(frame->rbo);
     rbo_storage(frame->rbo, GL_DEPTH24_STENCIL8, frame->width, frame->height);
     fbo_rbo(frame->fbo, frame->rbo, GL_DEPTH_STENCIL_ATTACHMENT);
+    fbo_bind(0);
 }
 
 void frame_begin(frame_t* frame) {

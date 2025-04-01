@@ -34,6 +34,64 @@ static void _igCreateDockingEnv(void) {
     igEnd();
 }
 
+static void _igStylize(ImGuiIO* io) {
+    ImGuiStyle* style = igGetStyle();
+    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        style->WindowBorderSize            = 0.0f;
+        style->ChildBorderSize             = 0.0f;
+        style->PopupBorderSize             = 0.0f;
+        style->FrameBorderSize             = 0.0f;
+        style->WindowRounding              = 4.0f;
+        style->ChildRounding               = 4.0f;
+        style->PopupRounding               = 4.0f;
+        style->FrameRounding               = 4.0f;
+        style->ScrollbarRounding           = 4.0f;
+        style->GrabRounding                = 4.0f;
+        style->TabBorderSize               = 0.0f;
+        style->TabBarBorderSize            = 0.0f;
+        style->TabBarOverlineSize          = 0.0f;
+        style->TabRounding                 = 4.0f;
+        style->DockingSeparatorSize        = 2.5f;
+    }
+
+    style->Colors[ImGuiCol_WindowBg] = (ImVec4){ 0.1f, 0.1f, 0.1f, 1.0f };
+
+    style->Colors[ImGuiCol_Header] = (ImVec4){ 0.2f, 0.2f, 0.2f, 1.0f };
+    style->Colors[ImGuiCol_HeaderHovered] = (ImVec4){ 0.3f, 0.3f, 0.3f, 1.0f };
+    style->Colors[ImGuiCol_HeaderActive] = (ImVec4){ 0.275f, 0.275f, 0.275f, 1.0f };
+
+    style->Colors[ImGuiCol_Button] = (ImVec4){ 0.2f, 0.2f, 0.2f, 1.0f };
+    style->Colors[ImGuiCol_ButtonHovered] = (ImVec4){ 0.3f, 0.3f, 0.3f, 1.0f };
+    style->Colors[ImGuiCol_ButtonActive] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+
+    style->Colors[ImGuiCol_FrameBg] = (ImVec4){ 0.2f, 0.2f, 0.2f, 1.0f };
+    style->Colors[ImGuiCol_FrameBgHovered] = (ImVec4){ 0.3f, 0.3f, 0.3f, 1.0f };
+    style->Colors[ImGuiCol_FrameBgActive] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+
+    style->Colors[ImGuiCol_Tab] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    style->Colors[ImGuiCol_TabHovered] = (ImVec4){ 0.38f, 0.38f, 0.38f, 1.0f };
+    style->Colors[ImGuiCol_TabSelected] = (ImVec4){ 0.28f, 0.28f, 0.28f, 1.0f };
+    style->Colors[ImGuiCol_TabSelectedOverline] = (ImVec4){ 0.38f, 0.38f, 0.38f, 1.0f };
+    style->Colors[ImGuiCol_TabDimmed] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    style->Colors[ImGuiCol_TabDimmedSelected] = (ImVec4){ 0.2f, 0.2f, 0.2f, 1.0f };
+    style->Colors[ImGuiCol_TabDimmedSelectedOverline] = (ImVec4){ 0.2f, 0.2f, 0.2f, 1.0f };
+
+    style->Colors[ImGuiCol_TitleBg] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    style->Colors[ImGuiCol_TitleBgActive] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    style->Colors[ImGuiCol_TitleBgCollapsed] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    
+    style->Colors[ImGuiCol_ResizeGrip] = (ImVec4){ 0.15f, 0.15f, 0.15f, 1.0f };
+    style->Colors[ImGuiCol_ResizeGripActive] = (ImVec4){ 0.38f, 0.38f, 0.38f, 1.0f };
+    style->Colors[ImGuiCol_ResizeGripHovered] = (ImVec4){ 0.28f, 0.28f, 0.28f, 1.0f };
+
+    style->Colors[ImGuiCol_CheckMark] = (ImVec4){ 1.0f, 1.0f, 1.0f, 1.0f };
+    style->Colors[ImGuiCol_SliderGrab] = (ImVec4){ 0.8f, 0.8f, 0.8f, 1.0f };
+    style->Colors[ImGuiCol_SliderGrabActive] = (ImVec4){ 1.0f, 1.0f, 1.0f, 1.0f };
+
+    style->Colors[ImGuiCol_SeparatorHovered] = (ImVec4){ 0.8f, 0.8f, 0.8f, 1.0f };
+    style->Colors[ImGuiCol_SeparatorActive] = (ImVec4){ 1.0f, 1.0f, 1.0f, 1.0f };
+}
+
 static void _chess_start(void* app_data) {
     app_data_t* app    = (app_data_t*)app_data;
     app->flog          = fopen("log.txt", "w+");
@@ -62,7 +120,7 @@ static void _chess_start(void* app_data) {
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
     
     SDL_GL_MakeCurrent(app->window, app->gl_context);
-    SDL_GL_SetSwapInterval(1); 
+    // SDL_GL_SetSwapInterval(1); 
 
     if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress))
         logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to initialize GLAD\n");
@@ -86,58 +144,20 @@ static void _chess_start(void* app_data) {
     ImGui_ImplSDL3_InitForOpenGL(app->window, app->gl_context);
     ImGui_ImplOpenGL3_Init("#version 460");
     igStyleColorsDark(NULL);
-
-    ImGuiStyle* style = igGetStyle();
-    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        style->WindowBorderSize            = 0.0f;
-        style->ChildBorderSize             = 0.0f;
-        style->PopupBorderSize             = 0.0f;
-        style->FrameBorderSize             = 0.0f;
-        style->WindowRounding              = 4.0f;
-        style->ChildRounding               = 4.0f;
-        style->PopupRounding               = 4.0f;
-        style->FrameRounding               = 4.0f;
-        style->ScrollbarRounding           = 4.0f;
-        style->GrabRounding                = 4.0f;
-        style->TabBorderSize               = 0.0f;
-        style->TabBarBorderSize            = 0.0f;
-        style->TabBarOverlineSize          = 0.0f;
-        style->TabRounding                 = 4.0f;
-        style->DockingSeparatorSize        = 2.5f;
-    }
+    _igStylize(io);
 
     frame_create(&app->frame, app->window_width, app->window_height);
-
+    fbo_bind(app->frame.fbo);
     if (fbo_check() != GL_FRAMEBUFFER_COMPLETE) {
         logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to create framebuffer!\n");
     } fbo_bind(0);
 
-    const char *vs_source = "#version 460 core\n"
-    "layout (location = 0) in vec3 attr_pos;\n"
-    "layout (location = 1) in vec2 attr_uv;\n"
-    "out vec2 uv_coord;\n"
-    "uniform mat4 model;\n"
-    "uniform mat4 view;\n"
-    "uniform mat4 proj;\n"
-    "void main() {\n"
-    "   gl_Position = proj * view * model * vec4(attr_pos, 1.0);\n"
-    "   uv_coord    = attr_uv;\n"
-    "}";
-
-    const char *fs_source = "#version 460 core\n"
-    "out vec4 frag_color;\n"
-    "in vec2 uv_coord;\n"
-    "uniform sampler2D tid;\n"
-    "void main() {\n"
-    "   frag_color = texture(tid, uv_coord);\n"
-    "}";
-
     shader_create(&app->shader);
-    if (!shader_source(app->shader, vs_source, fs_source))
+    if (!shader_load(app->shader, "assets/shaders/default.vert", "assets/shaders/default.frag"))
         logg_fprintf(
             app->flog, LOGG_ERROR, 
             "Failed to compile %s shader: %s\n", 
-            shader_geterr_stype(), shader_geterr_msg()
+            shader_geterr_filename(), shader_geterr_msg()
         );
     
     shader_uniform1i(app->shader, "tid", 0);
@@ -205,11 +225,11 @@ static void _chess_start(void* app_data) {
     vao_attributes(attributes, sizeof(attributes) / sizeof(attribute_t));
 
     texture_loadx(
-        &app->texture, "assets/board/brown.bmp", 
+        &app->texture, "assets/boards/brown.bmp", 
         GL_REPEAT, GL_REPEAT, 
         GL_LINEAR, GL_LINEAR
     ); if (!app->texture) 
-        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/board/brown.bmp\"\n");
+        logg_fprint(app->flog, LOGG_ERROR, "Failed to load \"assets/boards/brown.bmp\"\n");
 
     SDL_ShowWindow(app->window);
 }
@@ -238,17 +258,8 @@ static void _chess_run(void* app_data) {
     f64 prev_time     = 0.0;
     f64 delta_time    = 0.0;
     f64 cdelta_time   = 0.0;
-    f32 curr_tick     = (f32)SDL_GetTicks() / 1000.0f;
-    f32 prev_tick     = curr_tick;
-    f32 delta_tick    = 0.0;
-    f32 cdelta_tick   = 0.0;
     i64 fcount        = 0;
     i64 fps           = 0;
-    ImVec2 frame_size = {
-        .x = app->window_width, 
-        .y = app->window_height
-    }; 
-
     mat4 model, view, proj;
     glm_mat4_identity(model);
     glm_mat4_identity(view);
@@ -259,10 +270,6 @@ static void _chess_run(void* app_data) {
         curr_time    = (f64)SDL_GetTicksNS() / 1000000000.0f;
         delta_time   = curr_time - prev_time;
         cdelta_time += delta_time;
-
-        curr_tick    = (f32)SDL_GetTicks() / 1000.0f;
-        delta_tick   = curr_tick - prev_tick;
-        cdelta_tick += delta_tick;
 
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
@@ -275,8 +282,6 @@ static void _chess_run(void* app_data) {
             //     frame_resize(&app->frame, app->window_width, app->window_height);
             //     glViewport(0, 0, app->event.window.data1, app->event.window.data2);
             // }
-            if (frame_size.x + frame_size.y != app->frame.width + app->frame.height) 
-                frame_resize(&app->frame, frame_size.x, frame_size.y);
         }
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -312,13 +317,14 @@ static void _chess_run(void* app_data) {
         
         igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
         igBegin("framebuffer", NULL, 0); igPopStyleVar(1);
-        igGetContentRegionAvail(&frame_size);
-        igImage(app->frame.texture, frame_size, (ImVec2){0, 1}, (ImVec2){1, 0});
+        ImVec2 prev_size;
+        ImVec2 curr_size; igGetContentRegionAvail(&curr_size);
+        igImage(app->frame.texture, curr_size, (ImVec2){0, 1}, (ImVec2){1, 0});
         igEnd();
 
         igBegin("Performance", NULL, 0);
-        igText("time  : %.3f", curr_tick);
-        igText("delta : %.3f", delta_tick);
+        igText("time  : %.3f", curr_time);
+        igText("delta : %.3f", delta_time);
         igText("fps   : %d", fps);
         igEnd();
 
@@ -333,6 +339,10 @@ static void _chess_run(void* app_data) {
             SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
         }
         #endif
+        if (curr_size.x != prev_size.x || curr_size.y != prev_size.y) {
+            prev_size = curr_size;
+            frame_resize(&app->frame, curr_size.x, curr_size.y);
+        }
         SDL_GL_SwapWindow(app->window);
 
         fcount++;
@@ -340,11 +350,7 @@ static void _chess_run(void* app_data) {
             fps         = fcount;
             fcount      = 0;
             cdelta_time = 0.0;
-            cdelta_tick = 0.0;
-        } 
-        
-        prev_time = curr_time;
-        prev_tick = curr_tick;
+        } prev_time = curr_time;
     }
 }
 
