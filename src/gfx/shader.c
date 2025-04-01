@@ -16,17 +16,30 @@ static char _error_filename[512];
 static char _error_stype;
 
 static char* _file_getstr(const char* filename) {
-    u64   size = 0;
-    char* str  = NULL;
-    FILE* file = fopen(filename, "rb");
-    if (file) {
-        fseek(file, 0, SEEK_END);
-        size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-        str  = malloc(size);
-        fread(str, 1, size, file);
+    size_t size = 0;
+    char* str   = NULL;
+    FILE* file  = fopen(filename, "rb");
+    if (!file) return NULL;
+    
+    fseek(file, 0, SEEK_END);
+    size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (size < 0) {
         fclose(file);
-    } return str;
+        return NULL;
+    }
+
+    str          = malloc(size + 1);
+    size_t rsize = fread(str, 1, size, file);
+    if (rsize != size) {
+        free(str);
+        fclose(file);
+        return NULL;
+    } 
+    
+    str[size] = '\0';
+    fclose(file);
+    return str;
 }
 
 void shader_create(shader_t* shader) {
@@ -50,7 +63,7 @@ i32 shader_source(shader_t shader, const char* vs_source, const char* fs_source)
     glCompileShader(vshader);
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        _error_stype = 1;
+        _error_stype = 0;
         glGetShaderInfoLog(vshader, 512, NULL, _error_log);
         glDeleteShader(vshader);
         return success;
@@ -92,12 +105,12 @@ i32 shader_load(shader_t shader, const char* vs_filename, const char* fs_filenam
     if (vs_source == NULL) {
         strcpy(_error_log, "file not found!");
         strcpy(_error_filename, vs_filename);
-        return 1;
+        return 0;
     } if (fs_source == NULL) {
         strcpy(_error_log, "file not found!");
         strcpy(_error_filename, fs_filename);
         free(vs_source);
-        return 1;
+        return 0;
     }
 
     u32 vshader = glCreateShader(GL_VERTEX_SHADER);
@@ -105,7 +118,7 @@ i32 shader_load(shader_t shader, const char* vs_filename, const char* fs_filenam
     glCompileShader(vshader);
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        _error_stype = 1;
+        _error_stype = 0;
         glGetShaderInfoLog(vshader, 512, NULL, _error_log);
         glDeleteShader(vshader);
         strcpy(_error_filename, vs_filename);
