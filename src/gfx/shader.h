@@ -2,6 +2,7 @@
 #define SHADER_H
 
 #include "../types.h"
+#include "texture.h"
 
 typedef u32 shader_t;
 
@@ -13,6 +14,7 @@ i32 shader_load(shader_t shader, const char* vs_filename, const char* fs_filenam
 const char* shader_geterr_msg(void);
 const char* shader_geterr_stype(void);
 const char* shader_geterr_filename(void);
+void shader_uniform2D(shader_t shader, texture_t texture, const char* location, u32 id);
 void shader_uniform1i(shader_t shader, const char* location, i32 x);
 void shader_uniform1f(shader_t shader, const char* location, f32 x);
 void shader_uniform2f(shader_t shader, const char* location, f32 x, f32 y);

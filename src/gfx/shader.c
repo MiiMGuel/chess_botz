@@ -174,6 +174,11 @@ const char* shader_geterr_filename(void) {
     return _error_filename;
 }
 
+void shader_uniform2D(shader_t shader, texture_t texture, const char* location, u32 id) {
+    texture_activate(texture, id);
+    glUniform1f(glGetUniformLocation(shader, location), id);
+}
+
 void shader_uniform1i(shader_t shader, const char* location, i32 x) {
     glUniform1f(glGetUniformLocation(shader, location), x);
 }

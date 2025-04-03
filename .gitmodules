@@ -10,3 +10,6 @@
 [submodule "lib/stb"]
 	path = lib/stb
 	url = https://github.com/nothings/stb.git
+[submodule "lib/imgui-filebrowser"]
+	path = lib/imgui-filebrowser
+	url = git@github.com:MiiMGuel/imgui-filebrowser.git

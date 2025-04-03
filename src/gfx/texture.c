@@ -21,19 +21,25 @@ void texture_load(texture_t* texture, const char* filename) {
     glBindTexture(GL_TEXTURE_2D, *texture);
 
     image_t* image = image_load(filename);
-    switch (image->channels) {
-    case 3:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        break;
+    if (!image || !image->data) {
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDeleteTextures(1, texture);
+        return;
+    } switch (image->channels) {
+        case 3:
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            break;
     
-    case 4:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        break;
+        case 4:
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            break;
     
-    default:
-        break;
+        default:
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glDeleteTextures(1, texture);
+            break;
     } glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -62,6 +68,8 @@ void texture_loadx(texture_t* texture, const char* filename, u32 wrap_s, u32 wra
             break;
     
         default:
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glDeleteTextures(1, texture);
             break;
     } 
 

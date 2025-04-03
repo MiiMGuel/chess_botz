@@ -28,6 +28,7 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/src/chess.c
     ${PROJECT_SOURCE_DIR}/src/logg.c
     ${PROJECT_SOURCE_DIR}/src/gfx/image.c
+    ${PROJECT_SOURCE_DIR}/src/gfx/camera.c
     ${PROJECT_SOURCE_DIR}/src/gfx/shader.c
     ${PROJECT_SOURCE_DIR}/src/gfx/texture.c
     ${PROJECT_SOURCE_DIR}/src/gfx/vao.c
@@ -41,6 +42,8 @@ target_sources(
 
     ${PROJECT_SOURCE_DIR}/lib/cimgui/imgui/backends/imgui_impl_sdl3.cpp
     ${PROJECT_SOURCE_DIR}/lib/cimgui/imgui/backends/imgui_impl_opengl3.cpp
+    
+    ${PROJECT_SOURCE_DIR}/lib/imgui-filebrowser/cimfilebrowser.cpp
 ) 
 
 target_include_directories(
@@ -49,6 +52,7 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/src 
     ${PROJECT_SOURCE_DIR}/lib
     ${PROJECT_SOURCE_DIR}/lib/glad/include
+    ${PROJECT_SOURCE_DIR}/lib/imgui-filebrowser
 )
 
 target_link_libraries(

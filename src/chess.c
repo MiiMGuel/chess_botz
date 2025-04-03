@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
 #include <Windows.h>
 
 #include "main.h"
@@ -15,6 +16,7 @@
 #define CIMGUI_USE_SDL3
 #include "cimgui/cimgui.h"
 #include "cimgui/cimgui_impl.h"
+#include "cimfilebrowser.h"
 
 static void _igCreateDockingEnv(void) {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
@@ -120,7 +122,7 @@ static void _chess_start(void* app_data) {
         logg_fexit(app->flog, 1, LOGG_ERROR, SDL_GetError());
     
     SDL_GL_MakeCurrent(app->window, app->gl_context);
-    // SDL_GL_SetSwapInterval(1); 
+    SDL_GL_SetSwapInterval(1); 
 
     if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress))
         logg_fexit(app->flog, 1, LOGG_ERROR, "Failed to initialize GLAD\n");
@@ -145,6 +147,12 @@ static void _chess_start(void* app_data) {
     ImGui_ImplOpenGL3_Init("#version 460");
     igStyleColorsDark(NULL);
     _igStylize(io);
+    
+    app->img_browser = ImFileBrowser_Create(ImFileBrowserFlags_EditPathString);
+    ImFileBrowser_SetTitle(app->img_browser, "select image");
+    char* filter[3] = {".bmp", ".png", ".jpg"};
+    ImFileBrowser_SetTypeFilters(app->img_browser, filter, 3);
+    ImFileBrowser_SetDirectory(app->img_browser, "./assets");
 
     frame_create(&app->frame, app->window_width, app->window_height);
     fbo_bind(app->frame.fbo);
@@ -242,6 +250,7 @@ static void _chess_close(void* app_data) {
     shader_destroy(&app->shader);
     texture_destroy(&app->texture);
     frame_destroy(&app->frame);
+    ImFileBrowser_Destroy(app->img_browser);
     if (app->ig_context) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
@@ -260,15 +269,19 @@ static void _chess_run(void* app_data) {
     f64 cdelta_time   = 0.0;
     i64 fcount        = 0;
     i64 fps           = 0;
-    bool cube_spin    = false;
+    f32 spin_speed    = 1.0f;
+    f32 cam_speed     = 1.0f;
+    f32 cam_sens      = 0.1f;
+    bool vsync        = true;
     bool show_poly    = false;
-    vec3 cam_pos      = {0.0f, 0.0f,  3.0f};
-    vec3 cam_front    = {0.0f, 0.0f, -1.0f};
-    vec3 cam_up       = {0.0f, 1.0f,  0.0f};
-    mat4 model, cam_view, cam_proj;
-    glm_mat4_identity(model);
-    glm_mat4_identity(cam_view);
-    glm_mat4_identity(cam_proj);
+    bool cube_spin    = false;
+    mat4 model; glm_mat4_identity(model);
+    camera_t cam; camera_identify(
+        &cam, 1, 75.0f, 
+        0.1f, 100.0f, 
+        (f32)app->frame.width, (f32)app->frame.height,
+        (vec3){0.0f, 0.0f, 3.0f}, (vec3){0.0f, 0.0f, -1.0f}, (vec3){0.0f, 1.0f, 0.0f}
+    );
 
     while (true) {
         curr_time    = (f64)SDL_GetTicksNS() / 1000000000.0f;
@@ -278,37 +291,34 @@ static void _chess_run(void* app_data) {
         while(SDL_PollEvent(&app->event)) {
             ImGui_ImplSDL3_ProcessEvent(&app->event);
             if (app->event.type == SDL_EVENT_QUIT) exit(0);
-            // if (app->event.type == SDL_EVENT_WINDOW_RESIZED &&
-            //     app->event.window.windowID == SDL_GetWindowID(app->window)
-            // ) {
-            //     app->window_width  = app->event.window.data1;
-            //     app->window_height = app->event.window.data2;
-            //     frame_resize(&app->frame, app->window_width, app->window_height);
-            //     glViewport(0, 0, app->event.window.data1, app->event.window.data2);
-            // }
+            if (app->event.type == SDL_EVENT_WINDOW_RESIZED &&
+                app->event.window.windowID == SDL_GetWindowID(app->window)
+            ) {
+                app->window_width  = app->event.window.data1;
+                app->window_height = app->event.window.data2;
+                // frame_resize(&app->frame, app->window_width, app->window_height);
+                // glViewport(0, 0, app->event.window.data1, app->event.window.data2);
+            }
         }
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         frame_begin(&app->frame);
 
-        if (cube_spin) glm_rotate(model, (f32)1.0f * delta_time, (vec3){0.5f, 1.0f, 0.0f});
-        vec3 cam_center; glm_vec3_add(cam_pos, cam_front, cam_center);
-        glm_lookat_rh(cam_pos, cam_center, cam_up, cam_view);
-        glm_perspective(glm_rad(45.0f), (f32)app->frame.width / (f32)app->frame.height, 0.1f, 100.0f, cam_proj);
+        if (cube_spin) glm_rotate(model, (f32)spin_speed * delta_time, (vec3){0.5f, 1.0f, 0.0f});
+        camera_update(&cam);
 
         shader_activate(app->shader);
+        shader_uniform2D(app->shader, app->texture, "tid", 0);
         shader_uniform4mfv(app->shader, "model", 1, false, (f32*)model);
-        shader_uniform4mfv(app->shader, "view", 1, false, (f32*)cam_view);
-        shader_uniform4mfv(app->shader, "proj", 1, false, (f32*)cam_proj);
-
-        shader_activate(app->shader);
-        texture_activate(app->texture, 0);
+        shader_uniform4mfv(app->shader, "view", 1, false, (f32*)cam.view);
+        shader_uniform4mfv(app->shader, "proj", 1, false, (f32*)cam.proj);
         vao_bind(app->vao);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         frame_end(&app->frame);
 
         glClearColor(0.08f, 0.08f, 0.08f, 1.0f);
+        glViewport(0, 0, app->window_width, app->window_height);
         glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -323,10 +333,70 @@ static void _chess_run(void* app_data) {
         
         igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.0f, 0.0f});
         igBegin("framebuffer", NULL, 0); igPopStyleVar(1);
+        u32           frame_id  = igGetItemID();
+        static bool   first_tap = true;
         static ImVec2 prev_size = {0, 0};
         static ImVec2 curr_size = {0, 0}; igGetContentRegionAvail(&curr_size);
+        static ImVec2 curr_pos  = {0, 0}; igGetWindowPos(&curr_pos);
         igImage(app->frame.texture, curr_size, (ImVec2){0,1}, (ImVec2){1,0});
-        igEnd();
+        if (igIsWindowFocused(0) && igIsMouseDown_ID(ImGuiMouseButton_Right, frame_id)) {
+            igSetMouseCursor(ImGuiMouseCursor_None);
+            SDL_HideCursor();
+
+            vec3 cam_vspeed = {
+                cam_speed * delta_time, 
+                cam_speed * delta_time, 
+                cam_speed * delta_time
+            }; if (igIsKeyDown_ID(ImGuiKey_W, frame_id)) {
+                vec3 pos; glm_vec3_mul(cam_vspeed, cam.front, pos);
+                glm_vec3_add(cam.pos, pos, cam.pos);
+            } if (igIsKeyDown_ID(ImGuiKey_A, frame_id)) {
+                vec3 cross; glm_cross(cam.front, cam.up, cross); glm_normalize(cross);
+                vec3 pos; glm_vec3_mul(cam_vspeed, cross, pos);
+                glm_vec3_sub(cam.pos, pos, cam.pos);
+            } if (igIsKeyDown_ID(ImGuiKey_S, frame_id)) {
+                vec3 pos; glm_vec3_mul(cam_vspeed, cam.front, pos);
+                glm_vec3_sub(cam.pos, pos, cam.pos);
+            } if (igIsKeyDown_ID(ImGuiKey_D, frame_id)) {
+                vec3 cross; glm_cross(cam.front, cam.up, cross); glm_normalize(cross);
+                vec3 pos; glm_vec3_mul(cam_vspeed, cross, pos);
+                glm_vec3_add(cam.pos, pos, cam.pos);
+            }
+
+            static f32 yaw = -90.0f;
+            static f32 pitch = 0.0f;
+            static ImVec2 mouse_pos = {0.0f, 0.0f};
+            static ImVec2 center_pos = {0.0f, 0.0f};
+
+            if (first_tap) {
+                SDL_WarpMouseGlobal(curr_pos.x + curr_size.x / 2, curr_pos.y + curr_size.y / 2);
+                SDL_GetGlobalMouseState(&center_pos.x, &center_pos.y);
+                first_tap = false;
+            } SDL_GetGlobalMouseState(&mouse_pos.x, &mouse_pos.y);
+            
+            ImVec2 offset = {mouse_pos.x - center_pos.x, center_pos.y - mouse_pos.y};
+            offset.x *= cam_sens;
+            offset.y *= cam_sens;
+
+            yaw   += offset.x;
+            pitch += offset.y;
+
+            if(pitch > 89.0f)
+                pitch = 89.0f;
+            if(pitch < -89.0f)
+                pitch = -89.0f;
+            
+            vec3 dir = {
+                cos(glm_rad(yaw)) * cos(glm_rad(pitch)),
+                sin(glm_rad(pitch)),
+                sin(glm_rad(yaw)) * cos(glm_rad(pitch))
+            }; glm_normalize(dir); glm_vec3_copy(dir, cam.front);
+
+            SDL_WarpMouseGlobal(curr_pos.x + curr_size.x / 2, curr_pos.y + curr_size.y / 2);
+        } else {
+            SDL_ShowCursor();
+            first_tap = true;
+        } igEnd();
 
         igBegin("Performance", NULL, 0);
         igText("time  : %.3f", curr_time);
@@ -334,27 +404,52 @@ static void _chess_run(void* app_data) {
         igText("fps   : %d", fps);
         igEnd();
 
-        igBegin("Camera", NULL, 0);
-        igSeparatorText("Position");
-        igInputFloat("pos.x", &cam_pos[0], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("pos.y", &cam_pos[1], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("pos.z", &cam_pos[2], 0.1f, 0.5f, "%.3f", 0);
-        igSeparatorText("Front");
-        igInputFloat("front.x", &cam_front[0], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("front.y", &cam_front[1], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("front.z", &cam_front[2], 0.1f, 0.5f, "%.3f", 0);
-        igSeparatorText("Up");
-        igInputFloat("up.x", &cam_up[0], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("up.y", &cam_up[1], 0.1f, 0.5f, "%.3f", 0);
-        igInputFloat("up.z", &cam_up[2], 0.1f, 0.5f, "%.3f", 0);
-        igSeparatorText("Other");
+        igBegin("Render", NULL, 0);
+        if (igCheckbox("enable vsync", &vsync))
+            SDL_GL_SetSwapInterval(vsync);
         if (igCheckbox("polygon line", &show_poly))
             if (show_poly) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        if (igCheckbox("cube spin", &cube_spin))
-            glm_mat4_identity(model);
         igEnd();
 
+        igBegin("Cube", NULL, 0);
+        igInputFloat("speed", &spin_speed, 0.1f, 0.5f, "%.3f", 0);
+        if (igCheckbox("spin", &cube_spin))
+            glm_mat4_identity(model);
+        if (igButton("select image", (ImVec2){.x = 0, .y = 0}))
+            ImFileBrowser_Open(app->img_browser);
+        igEnd();
+
+        igBegin("Camera", NULL, 0);
+        igInputFloat("FOV", &cam.fov, 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("near", &cam.nearZ, 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("far", &cam.farZ, 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("speed", &cam_speed, 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("sens", &cam_sens, 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Position");
+        igInputFloat("pos.x", &cam.pos[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("pos.y", &cam.pos[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("pos.z", &cam.pos[2], 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Front");
+        igInputFloat("front.x", &cam.front[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("front.y", &cam.front[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("front.z", &cam.front[2], 0.1f, 0.5f, "%.3f", 0);
+        igSeparatorText("Up");
+        igInputFloat("up.x", &cam.up[0], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("up.y", &cam.up[1], 0.1f, 0.5f, "%.3f", 0);
+        igInputFloat("up.z", &cam.up[2], 0.1f, 0.5f, "%.3f", 0);
+        igEnd();
+
+        if (ImFileBrowser_HasSelected(app->img_browser)){
+            logg_fprintf(app->flog, LOGG_INFO, "file %s was selected!\n", ImFileBrowser_GetSelected(app->img_browser));
+            texture_destroy(&app->texture);
+            texture_loadx(&app->texture, ImFileBrowser_GetSelected(app->img_browser), GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+            if (!app->texture)
+                logg_fprintf(app->flog, LOGG_ERROR, "Failed to load \"%s\"\n", ImFileBrowser_GetSelected(app->img_browser));
+            ImFileBrowser_ClearSelected(app->img_browser);
+        }
+
+        ImFileBrowser_Display(app->img_browser);
         igRender();
         ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
         #ifdef IMGUI_HAS_DOCK
@@ -366,11 +461,13 @@ static void _chess_run(void* app_data) {
             SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
         }
         #endif
+        
         if (curr_size.x != prev_size.x || curr_size.y != prev_size.y) {
-            prev_size = curr_size;
+            prev_size = curr_size; 
+            cam.width = curr_size.x; 
+            cam.height = curr_size.y;
             frame_resize(&app->frame, curr_size.x, curr_size.y);
-        }
-        SDL_GL_SwapWindow(app->window);
+        } SDL_GL_SwapWindow(app->window);
 
         fcount++;
         if (cdelta_time >= 1.0) {

@@ -4,6 +4,7 @@
 #include "glad/glad.h"
 #include "../types.h"
 #include "image.h"
+#include "camera.h"
 #include "texture.h"
 #include "shader.h"
 #include "vao.h"
